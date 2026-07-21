@@ -16,6 +16,10 @@ const SHEET_INFO = {
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
 };
 
+// Full on s'ofereixen els filtres per Masia i Any (vegeu renderTableFilters
+// a render.js): és el nom tècnic de la pestanya "Serveis".
+const SERVICES_SHEET_NAME = 'Hoja 1';
+
 const state = {
   sheets: [],
   currentName: null,
@@ -23,7 +27,19 @@ const state = {
   rows: [],
   loaded: false,
   filterQuery: '',
+  filterMasia: [],
+  filterAny: [],
 };
+
+// Cert si la fila conté algun dels valors seleccionats a la columna
+// colIndex (la cel·la es divideix per comes, ja que una mateixa fila
+// pot aplicar a diverses masies/anys alhora). Sense selecció, o sense
+// columna, no filtra res.
+function rowMatchesValueFilter(row, colIndex, selectedValues) {
+  if (!selectedValues.length || colIndex === -1) return true;
+  const cellParts = String(row[colIndex] || '').split(',').map(function (part) { return part.trim(); });
+  return selectedValues.some(function (value) { return cellParts.indexOf(value) !== -1; });
+}
 
 var DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
 function normalizeText(value) {

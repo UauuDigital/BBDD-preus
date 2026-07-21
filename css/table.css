@@ -28,27 +28,9 @@ thead th {
 }
 
 .header-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-}
-
-.header-input {
-  flex: 1;
-  border: none;
-  background: transparent;
+  padding: var(--space-3) var(--space-2);
   font-weight: 600;
   font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-1);
-  min-width: 0;
-  border-radius: var(--radius-sm);
-}
-.header-input:hover { background: var(--color-sand-pale); }
-.header-input:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
 }
 
 .icon-btn {
@@ -66,7 +48,6 @@ thead th {
   transition: opacity var(--duration) var(--ease-out), background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
 }
 tr:hover .icon-btn,
-.header-cell:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
 .icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }

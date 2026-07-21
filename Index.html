@@ -243,6 +243,15 @@ button, input {
 
 .toolbar-spacer { flex: 1; }
 
+.table-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.table-filters[hidden] { display: none; }
+
+.table-filters .table-filter { width: 150px; }
+
 .sheet-hint {
   margin: calc(var(--space-5) * -1 + var(--space-1)) 0 var(--space-4);
   font-size: var(--text-sm);
@@ -258,6 +267,8 @@ button, input {
 .search-field svg {
   position: absolute;
   left: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--fg-tertiary);
   pointer-events: none;
 }
@@ -338,27 +349,9 @@ thead th {
 }
 
 .header-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-}
-
-.header-input {
-  flex: 1;
-  border: none;
-  background: transparent;
+  padding: var(--space-3) var(--space-2);
   font-weight: 600;
   font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-1);
-  min-width: 0;
-  border-radius: var(--radius-sm);
-}
-.header-input:hover { background: var(--color-sand-pale); }
-.header-input:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
 }
 
 .icon-btn {
@@ -376,7 +369,6 @@ thead th {
   transition: opacity var(--duration) var(--ease-out), background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
 }
 tr:hover .icon-btn,
-.header-cell:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
 .icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -789,10 +781,23 @@ td.row-actions-col { padding: 0 var(--space-2); }
   overflow: visible;
 }
 
+.switch-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+}
+
 .switch-option-group {
   margin-bottom: var(--space-4);
+  min-width: 0;
 }
 .switch-option-group:last-child { margin-bottom: 0; }
+
+.switch-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
 
 .switch-option-heading {
   margin: 0 0 var(--space-2);
@@ -874,14 +879,14 @@ td.row-actions-col { padding: 0 var(--space-2); }
   <p id="sheetHint" class="sheet-hint"></p>
 
   <div class="toolbar">
-    <button id="addRowBtn" class="btn btn-primary" type="button"></button>
-    <button id="addColBtn" class="btn" type="button"></button>
     <label class="search-field">
       <span id="searchIcon"></span>
       <input id="searchInput" class="search-input" type="search" placeholder="Cerca..." aria-label="Cerca dins d'aquest full" />
     </label>
+    <div id="tableFilters" class="table-filters"></div>
     <span class="toolbar-spacer"></span>
     <span id="statusMsg" class="status" role="status" aria-live="polite"></span>
+    <button id="addRowBtn" class="btn btn-primary" type="button"></button>
     <button id="refreshBtn" class="btn btn-ghost" type="button" aria-label="Refresca"></button>
   </div>
 
@@ -937,6 +942,10 @@ const SHEET_INFO = {
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
 };
 
+// Full on s'ofereixen els filtres per Masia i Any (vegeu renderTableFilters
+// a render.js): és el nom tècnic de la pestanya "Serveis".
+const SERVICES_SHEET_NAME = 'Hoja 1';
+
 const state = {
   sheets: [],
   currentName: null,
@@ -944,7 +953,19 @@ const state = {
   rows: [],
   loaded: false,
   filterQuery: '',
+  filterMasia: [],
+  filterAny: [],
 };
+
+// Cert si la fila conté algun dels valors seleccionats a la columna
+// colIndex (la cel·la es divideix per comes, ja que una mateixa fila
+// pot aplicar a diverses masies/anys alhora). Sense selecció, o sense
+// columna, no filtra res.
+function rowMatchesValueFilter(row, colIndex, selectedValues) {
+  if (!selectedValues.length || colIndex === -1) return true;
+  const cellParts = String(row[colIndex] || '').split(',').map(function (part) { return part.trim(); });
+  return selectedValues.some(function (value) { return cellParts.indexOf(value) !== -1; });
+}
 
 var DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
 function normalizeText(value) {
@@ -986,6 +1007,8 @@ function renderTabs() {
       if (sheet.name === state.currentName) return;
       state.currentName = sheet.name;
       state.filterQuery = '';
+      state.filterMasia = [];
+      state.filterAny = [];
       document.getElementById('searchInput').value = '';
       renderTabs();
       renderSkeleton(state.headers.length || 3, 5);
@@ -997,6 +1020,37 @@ function renderTabs() {
   const hintEl = document.getElementById('sheetHint');
   const currentInfo = SHEET_INFO[state.currentName];
   hintEl.textContent = currentInfo ? currentInfo.hint : '';
+}
+
+// Filtres per Masia i Any: només al full "Serveis", i només per a les
+// columnes que hi existeixin. Es reconstrueixen cada cop que es carrega
+// el full (les opcions depenen de les dades actuals), conservant la
+// selecció ja feta.
+function renderTableFilters() {
+  const container = document.getElementById('tableFilters');
+  container.innerHTML = '';
+  container.hidden = state.currentName !== SERVICES_SHEET_NAME;
+  if (container.hidden) return;
+
+  [
+    { header: 'Masia', selected: state.filterMasia, apply: function (values) { state.filterMasia = values; } },
+    { header: 'Any', selected: state.filterAny, apply: function (values) { state.filterAny = values; } },
+  ].forEach(function (def) {
+    const colIndex = state.headers.indexOf(def.header);
+    if (colIndex === -1) return;
+
+    const field = buildDropdownField(
+      colIndex, def.selected.join(', '), getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header
+    );
+    field.classList.add('table-filter');
+    const hiddenInput = field.querySelector('input[type="hidden"]');
+    field.addEventListener('change', function () {
+      def.apply(hiddenInput.value ? hiddenInput.value.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : []);
+      renderTable();
+    });
+
+    container.appendChild(field);
+  });
 }
 
 function renderSkeleton(cols, rows) {
@@ -1029,18 +1083,11 @@ function renderTable() {
   thActions.className = 'row-actions-col';
   headRow.appendChild(thActions);
 
-  state.headers.forEach(function (label, colIndex) {
+  state.headers.forEach(function (label) {
     const th = document.createElement('th');
     const wrap = document.createElement('div');
     wrap.className = 'header-cell';
-
-    const input = document.createElement('input');
-    input.className = 'header-input';
-    input.value = label;
-    input.setAttribute('aria-label', 'Nom de la columna ' + (colIndex + 1));
-    input.addEventListener('change', function () { renameColumn(colIndex, input.value); });
-
-    wrap.appendChild(input);
+    wrap.textContent = label;
     th.appendChild(wrap);
     headRow.appendChild(th);
   });
@@ -1050,11 +1097,15 @@ function renderTable() {
 
   const tbody = document.createElement('tbody');
   const query = normalizeText(state.filterQuery).trim();
+  const masiaColIndex = state.headers.indexOf('Masia');
+  const anyColIndex = state.headers.indexOf('Any');
   const visible = state.rows
     .map(function (row, rowIndex) { return { row: row, rowIndex: rowIndex }; })
     .filter(function (item) {
-      if (!query) return true;
-      return item.row.some(function (cell) { return normalizeText(cell).indexOf(query) !== -1; });
+      if (query && !item.row.some(function (cell) { return normalizeText(cell).indexOf(query) !== -1; })) return false;
+      if (!rowMatchesValueFilter(item.row, masiaColIndex, state.filterMasia)) return false;
+      if (!rowMatchesValueFilter(item.row, anyColIndex, state.filterAny)) return false;
+      return true;
     });
 
   if (!state.rows.length) {
@@ -1070,7 +1121,9 @@ function renderTable() {
     tr.className = 'empty-row';
     const td = document.createElement('td');
     td.colSpan = state.headers.length + 1;
-    td.textContent = 'Cap fila coincideix amb "' + state.filterQuery + '".';
+    td.textContent = state.filterQuery
+      ? 'Cap fila coincideix amb "' + state.filterQuery + '".'
+      : 'Cap fila coincideix amb els filtres seleccionats.';
     tr.appendChild(td);
     tbody.appendChild(tr);
   }
@@ -1140,7 +1193,7 @@ function getDistinctColumnValues(colIndex, splitCombined) {
 // visual, es clica el nom de l'opció (no una casella al costat). En
 // uniselecció, triar una opció desa el valor i tanca el panell; en
 // multiselecció es poden marcar diverses sense que es tanqui.
-function buildDropdownField(colIndex, initialValue, options, multi) {
+function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, placeholderText) {
   const initialSelection = multi
     ? String(initialValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean)
     : (initialValue ? [String(initialValue)] : []);
@@ -1150,7 +1203,7 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
-  trigger.id = 'addRowField' + colIndex;
+  trigger.id = (idPrefix || 'addRowField') + colIndex;
   trigger.className = 'multiselect-trigger';
   trigger.disabled = !options.length;
   trigger.setAttribute('aria-haspopup', 'true');
@@ -1167,9 +1220,10 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
   // En multiselecció, amb 3+ seleccions es mostra un recompte
   // ("3 seleccionades") en lloc de la llista sencera; el títol
   // (tooltip) sempre té la llista completa.
+  const emptyLabel = placeholderText || 'Selecciona...';
   function setTriggerLabel(list) {
     triggerLabel.textContent = !list.length
-      ? (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar')
+      ? (options.length ? emptyLabel : 'Encara no hi ha valors per triar')
       : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
     trigger.title = list.join(', ');
   }
@@ -1248,7 +1302,12 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
     panel.hidden = false;
     trigger.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
-    document.getElementById('addRowFields').addEventListener('scroll', closePanel, { passive: true });
+    // capture:true perquè els events "scroll" no fan bombolla: així es
+    // detecta tant el scroll de la finestra com el d'un contenidor
+    // intern amb overflow (.modal-fields, .table-wrap...) sense haver
+    // de conèixer quin és — funciona igual dins el modal que a la
+    // barra d'eines de la taula.
+    window.addEventListener('scroll', closePanel, { passive: true, capture: true });
     window.addEventListener('resize', closePanel);
   }
 
@@ -1256,7 +1315,7 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
     panel.hidden = true;
     trigger.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
-    document.getElementById('addRowFields').removeEventListener('scroll', closePanel);
+    window.removeEventListener('scroll', closePanel, { capture: true });
     window.removeEventListener('resize', closePanel);
   }
   panel._closeMultiselect = closePanel;
@@ -1445,6 +1504,42 @@ function buildLlindaSection() {
 // com a JSON: [{"CAT":"...","CAST":"...","ENG":"...","PREU":123}, ...]
 const DESPLEGABLE_HEADER = 'Desplegable';
 
+// Connecta un grup de camps [{ input, lang }] (codis 'ca'/'es'/'en')
+// perquè, en escriure en un, es tradueixi automàticament als altres
+// (amb debounce, com el mateix mecanisme del pas "Informació general").
+function wireLangAutoTranslate(fields) {
+  fields.forEach(function (field) {
+    const triggerTranslate = debounce(function () {
+      const text = field.input.value.trim();
+      if (!text) return;
+
+      google.script.run
+        .withSuccessHandler(function (translations) {
+          if (field.input.value.trim() !== text) return;
+          fields.forEach(function (other) {
+            if (other === field) return;
+            const translated = translations[other.lang];
+            if (translated === undefined || document.activeElement === other.input) return;
+            other.input.value = translated;
+            // Dispara "input" perquè qualsevol listener propi del camp
+            // (p.ex. la sincronització de dades del Switch) se n'assabenti:
+            // només assignar .value no el dispara sol. isTrusted=false en
+            // aquest event evita que torni a disparar una traducció en
+            // cadena (vegeu el filtre més avall).
+            other.input.dispatchEvent(new Event('input', { bubbles: true }));
+          });
+        })
+        .withFailureHandler(onError)
+        .translateToLangs(text, field.lang);
+    }, 400);
+
+    field.input.addEventListener('input', function (event) {
+      if (!event.isTrusted) return;
+      triggerTranslate();
+    });
+  });
+}
+
 function parseDesplegableItems(raw) {
   try {
     const parsed = JSON.parse(raw || '[]');
@@ -1582,6 +1677,12 @@ function buildDesplegableSection(colIndex) {
     });
   });
 
+  wireLangAutoTranslate([
+    { input: catInput, lang: 'ca' },
+    { input: castInput, lang: 'es' },
+    { input: engInput, lang: 'en' },
+  ]);
+
   form.appendChild(catInput);
   form.appendChild(castInput);
   form.appendChild(engInput);
@@ -1659,12 +1760,13 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
   group.appendChild(heading);
 
   const fieldsGrid = document.createElement('div');
-  fieldsGrid.className = 'modal-fields modal-fields-nested';
+  fieldsGrid.className = 'modal-fields modal-fields-nested switch-fields-grid';
+  const langInputs = [];
 
   [
-    { key: 'CAT', label: 'Català', type: 'text' },
-    { key: 'CAST', label: 'Castellà', type: 'text' },
-    { key: 'ENG', label: 'Anglès', type: 'text' },
+    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca' },
+    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es' },
+    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en' },
     { key: 'PREU', label: 'Preu', type: 'currency' },
   ].forEach(function (def) {
     let control;
@@ -1694,6 +1796,7 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
         onChange();
       });
       control = input;
+      langInputs.push({ input: input, lang: def.lang });
     }
 
     const field = document.createElement('div');
@@ -1704,6 +1807,8 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
     field.appendChild(control);
     fieldsGrid.appendChild(field);
   });
+
+  wireLangAutoTranslate(langInputs);
 
   group.appendChild(fieldsGrid);
   return group;
@@ -1729,8 +1834,11 @@ function buildSwitchSection(colIndex) {
 
   function sync() { hiddenInput.value = JSON.stringify(current); }
 
-  container.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
-  container.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  const optionsGrid = document.createElement('div');
+  optionsGrid.className = 'switch-options-grid';
+  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
+  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  container.appendChild(optionsGrid);
   container.appendChild(hiddenInput);
 
   sync();
@@ -2165,6 +2273,7 @@ function onSheetLoaded(data) {
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
+  renderTableFilters();
   renderTable();
   setStatus(state.rows.length + ' files carregades.', 'success');
 }
@@ -2191,22 +2300,6 @@ function saveCell(input, rowIndex, colIndex) {
     .updateCell(state.currentName, rowIndex, colIndex, value);
 }
 
-function renameColumn(colIndex, newLabel) {
-  const oldLabel = state.headers[colIndex];
-  if (newLabel === oldLabel) return;
-  setStatus('Desant capçalera...', 'loading');
-  google.script.run
-    .withSuccessHandler(function () {
-      state.headers[colIndex] = newLabel;
-      setStatus('Desat.', 'success');
-    })
-    .withFailureHandler(function (err) {
-      onError(err);
-      renderTable();
-    })
-    .renameHeader(state.currentName, colIndex, newLabel);
-}
-
 function handleAddRow() {
   openAddRowModal();
 }
@@ -2220,25 +2313,13 @@ function handleDeleteRow(rowIndex) {
     .withFailureHandler(onError)
     .deleteRow(state.currentName, rowIndex);
 }
-
-function handleAddColumn() {
-  const label = prompt('Nom de la nova columna:');
-  if (!label) return;
-  setStatus('Afegint columna...', 'loading');
-  google.script.run
-    .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
-    .addColumn(state.currentName, label);
-}
 document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('addRowBtn').innerHTML = ICONS.plus + '<span>Fila</span>';
-  document.getElementById('addColBtn').innerHTML = ICONS.plus + '<span>Columna</span>';
   document.getElementById('refreshBtn').innerHTML = ICONS.refresh;
 
   document.getElementById('searchIcon').innerHTML = ICONS.search;
 
   document.getElementById('addRowBtn').addEventListener('click', handleAddRow);
-  document.getElementById('addColBtn').addEventListener('click', handleAddColumn);
   document.getElementById('refreshBtn').addEventListener('click', loadCurrentSheet);
   document.getElementById('searchInput').addEventListener('input', function (e) {
     state.filterQuery = e.target.value;

@@ -24,7 +24,7 @@ function getDistinctColumnValues(colIndex, splitCombined) {
 // visual, es clica el nom de l'opció (no una casella al costat). En
 // uniselecció, triar una opció desa el valor i tanca el panell; en
 // multiselecció es poden marcar diverses sense que es tanqui.
-function buildDropdownField(colIndex, initialValue, options, multi) {
+function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, placeholderText) {
   const initialSelection = multi
     ? String(initialValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean)
     : (initialValue ? [String(initialValue)] : []);
@@ -34,7 +34,7 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
-  trigger.id = 'addRowField' + colIndex;
+  trigger.id = (idPrefix || 'addRowField') + colIndex;
   trigger.className = 'multiselect-trigger';
   trigger.disabled = !options.length;
   trigger.setAttribute('aria-haspopup', 'true');
@@ -51,9 +51,10 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
   // En multiselecció, amb 3+ seleccions es mostra un recompte
   // ("3 seleccionades") en lloc de la llista sencera; el títol
   // (tooltip) sempre té la llista completa.
+  const emptyLabel = placeholderText || 'Selecciona...';
   function setTriggerLabel(list) {
     triggerLabel.textContent = !list.length
-      ? (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar')
+      ? (options.length ? emptyLabel : 'Encara no hi ha valors per triar')
       : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
     trigger.title = list.join(', ');
   }
@@ -132,7 +133,12 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
     panel.hidden = false;
     trigger.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
-    document.getElementById('addRowFields').addEventListener('scroll', closePanel, { passive: true });
+    // capture:true perquè els events "scroll" no fan bombolla: així es
+    // detecta tant el scroll de la finestra com el d'un contenidor
+    // intern amb overflow (.modal-fields, .table-wrap...) sense haver
+    // de conèixer quin és — funciona igual dins el modal que a la
+    // barra d'eines de la taula.
+    window.addEventListener('scroll', closePanel, { passive: true, capture: true });
     window.addEventListener('resize', closePanel);
   }
 
@@ -140,7 +146,7 @@ function buildDropdownField(colIndex, initialValue, options, multi) {
     panel.hidden = true;
     trigger.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
-    document.getElementById('addRowFields').removeEventListener('scroll', closePanel);
+    window.removeEventListener('scroll', closePanel, { capture: true });
     window.removeEventListener('resize', closePanel);
   }
   panel._closeMultiselect = closePanel;

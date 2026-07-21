@@ -350,10 +350,23 @@
   overflow: visible;
 }
 
+.switch-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+}
+
 .switch-option-group {
   margin-bottom: var(--space-4);
+  min-width: 0;
 }
 .switch-option-group:last-child { margin-bottom: 0; }
+
+.switch-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
 
 .switch-option-heading {
   margin: 0 0 var(--space-2);

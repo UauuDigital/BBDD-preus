@@ -67,12 +67,6 @@ function updateCell(sheetName, rowIndex, colIndex, value) {
   return true;
 }
 
-function renameHeader(sheetName, colIndex, label) {
-  const sheet = getSheetOrThrow_(sheetName);
-  sheet.getRange(1, colIndex + 1).setValue(label);
-  return true;
-}
-
 function appendRow(sheetName, values) {
   const sheet = getSheetOrThrow_(sheetName);
   const newRow = sheet.getLastRow() + 1;
@@ -93,13 +87,6 @@ function deleteRow(sheetName, rowIndex) {
   return true;
 }
 
-function addColumn(sheetName, label) {
-  const sheet = getSheetOrThrow_(sheetName);
-  const newCol = sheet.getLastColumn() + 1;
-  sheet.getRange(1, newCol).setValue(label);
-  return true;
-}
-
 // Relaciona cada capçalera de nom de servei amb el seu codi d'idioma,
 // per poder traduir-les entre elles amb el traductor integrat d'Apps
 // Script (LanguageApp), sense necessitat de cap API key.
@@ -109,15 +96,27 @@ const SERVICE_NAME_LANGS = {
   'NomENG': 'en',
 };
 
+// Tradueix un text als altres dos idiomes de ['ca', 'es', 'en'] (retorna
+// un objecte { <codi idioma>: traducció } sense el de sourceLang).
+function translateToLangs(text, sourceLang) {
+  if (!text || !sourceLang) return {};
+  const translations = {};
+  ['ca', 'es', 'en'].forEach(function (lang) {
+    if (lang === sourceLang) return;
+    translations[lang] = LanguageApp.translate(text, sourceLang, lang);
+  });
+  return translations;
+}
+
 function translateServiceName(text, sourceHeader) {
   const sourceLang = SERVICE_NAME_LANGS[sourceHeader];
-  if (!text || !sourceLang) return {};
+  if (!sourceLang) return {};
+  const byLang = translateToLangs(text, sourceLang);
 
   const translations = {};
   Object.keys(SERVICE_NAME_LANGS).forEach(function (header) {
-    const targetLang = SERVICE_NAME_LANGS[header];
-    if (targetLang === sourceLang) return;
-    translations[header] = LanguageApp.translate(text, sourceLang, targetLang);
+    const lang = SERVICE_NAME_LANGS[header];
+    if (byLang[lang] !== undefined) translations[header] = byLang[lang];
   });
   return translations;
 }

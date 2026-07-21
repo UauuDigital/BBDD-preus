@@ -64,12 +64,13 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
   group.appendChild(heading);
 
   const fieldsGrid = document.createElement('div');
-  fieldsGrid.className = 'modal-fields modal-fields-nested';
+  fieldsGrid.className = 'modal-fields modal-fields-nested switch-fields-grid';
+  const langInputs = [];
 
   [
-    { key: 'CAT', label: 'Català', type: 'text' },
-    { key: 'CAST', label: 'Castellà', type: 'text' },
-    { key: 'ENG', label: 'Anglès', type: 'text' },
+    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca' },
+    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es' },
+    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en' },
     { key: 'PREU', label: 'Preu', type: 'currency' },
   ].forEach(function (def) {
     let control;
@@ -99,6 +100,7 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
         onChange();
       });
       control = input;
+      langInputs.push({ input: input, lang: def.lang });
     }
 
     const field = document.createElement('div');
@@ -109,6 +111,8 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
     field.appendChild(control);
     fieldsGrid.appendChild(field);
   });
+
+  wireLangAutoTranslate(langInputs);
 
   group.appendChild(fieldsGrid);
   return group;
@@ -134,8 +138,11 @@ function buildSwitchSection(colIndex) {
 
   function sync() { hiddenInput.value = JSON.stringify(current); }
 
-  container.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
-  container.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  const optionsGrid = document.createElement('div');
+  optionsGrid.className = 'switch-options-grid';
+  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
+  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  container.appendChild(optionsGrid);
   container.appendChild(hiddenInput);
 
   sync();

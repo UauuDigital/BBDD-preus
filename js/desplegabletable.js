@@ -3,6 +3,42 @@
 // com a JSON: [{"CAT":"...","CAST":"...","ENG":"...","PREU":123}, ...]
 const DESPLEGABLE_HEADER = 'Desplegable';
 
+// Connecta un grup de camps [{ input, lang }] (codis 'ca'/'es'/'en')
+// perquè, en escriure en un, es tradueixi automàticament als altres
+// (amb debounce, com el mateix mecanisme del pas "Informació general").
+function wireLangAutoTranslate(fields) {
+  fields.forEach(function (field) {
+    const triggerTranslate = debounce(function () {
+      const text = field.input.value.trim();
+      if (!text) return;
+
+      google.script.run
+        .withSuccessHandler(function (translations) {
+          if (field.input.value.trim() !== text) return;
+          fields.forEach(function (other) {
+            if (other === field) return;
+            const translated = translations[other.lang];
+            if (translated === undefined || document.activeElement === other.input) return;
+            other.input.value = translated;
+            // Dispara "input" perquè qualsevol listener propi del camp
+            // (p.ex. la sincronització de dades del Switch) se n'assabenti:
+            // només assignar .value no el dispara sol. isTrusted=false en
+            // aquest event evita que torni a disparar una traducció en
+            // cadena (vegeu el filtre més avall).
+            other.input.dispatchEvent(new Event('input', { bubbles: true }));
+          });
+        })
+        .withFailureHandler(onError)
+        .translateToLangs(text, field.lang);
+    }, 400);
+
+    field.input.addEventListener('input', function (event) {
+      if (!event.isTrusted) return;
+      triggerTranslate();
+    });
+  });
+}
+
 function parseDesplegableItems(raw) {
   try {
     const parsed = JSON.parse(raw || '[]');
@@ -139,6 +175,12 @@ function buildDesplegableSection(colIndex) {
       addEntry();
     });
   });
+
+  wireLangAutoTranslate([
+    { input: catInput, lang: 'ca' },
+    { input: castInput, lang: 'es' },
+    { input: engInput, lang: 'en' },
+  ]);
 
   form.appendChild(catInput);
   form.appendChild(castInput);

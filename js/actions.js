@@ -24,6 +24,7 @@ function onSheetLoaded(data) {
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
+  renderTableFilters();
   renderTable();
   setStatus(state.rows.length + ' files carregades.', 'success');
 }
@@ -50,22 +51,6 @@ function saveCell(input, rowIndex, colIndex) {
     .updateCell(state.currentName, rowIndex, colIndex, value);
 }
 
-function renameColumn(colIndex, newLabel) {
-  const oldLabel = state.headers[colIndex];
-  if (newLabel === oldLabel) return;
-  setStatus('Desant capçalera...', 'loading');
-  google.script.run
-    .withSuccessHandler(function () {
-      state.headers[colIndex] = newLabel;
-      setStatus('Desat.', 'success');
-    })
-    .withFailureHandler(function (err) {
-      onError(err);
-      renderTable();
-    })
-    .renameHeader(state.currentName, colIndex, newLabel);
-}
-
 function handleAddRow() {
   openAddRowModal();
 }
@@ -78,14 +63,4 @@ function handleDeleteRow(rowIndex) {
     .withSuccessHandler(loadCurrentSheet)
     .withFailureHandler(onError)
     .deleteRow(state.currentName, rowIndex);
-}
-
-function handleAddColumn() {
-  const label = prompt('Nom de la nova columna:');
-  if (!label) return;
-  setStatus('Afegint columna...', 'loading');
-  google.script.run
-    .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
-    .addColumn(state.currentName, label);
 }

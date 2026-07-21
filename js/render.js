@@ -13,6 +13,8 @@ function renderTabs() {
       if (sheet.name === state.currentName) return;
       state.currentName = sheet.name;
       state.filterQuery = '';
+      state.filterMasia = [];
+      state.filterAny = [];
       document.getElementById('searchInput').value = '';
       renderTabs();
       renderSkeleton(state.headers.length || 3, 5);
@@ -24,6 +26,37 @@ function renderTabs() {
   const hintEl = document.getElementById('sheetHint');
   const currentInfo = SHEET_INFO[state.currentName];
   hintEl.textContent = currentInfo ? currentInfo.hint : '';
+}
+
+// Filtres per Masia i Any: només al full "Serveis", i només per a les
+// columnes que hi existeixin. Es reconstrueixen cada cop que es carrega
+// el full (les opcions depenen de les dades actuals), conservant la
+// selecció ja feta.
+function renderTableFilters() {
+  const container = document.getElementById('tableFilters');
+  container.innerHTML = '';
+  container.hidden = state.currentName !== SERVICES_SHEET_NAME;
+  if (container.hidden) return;
+
+  [
+    { header: 'Masia', selected: state.filterMasia, apply: function (values) { state.filterMasia = values; } },
+    { header: 'Any', selected: state.filterAny, apply: function (values) { state.filterAny = values; } },
+  ].forEach(function (def) {
+    const colIndex = state.headers.indexOf(def.header);
+    if (colIndex === -1) return;
+
+    const field = buildDropdownField(
+      colIndex, def.selected.join(', '), getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header
+    );
+    field.classList.add('table-filter');
+    const hiddenInput = field.querySelector('input[type="hidden"]');
+    field.addEventListener('change', function () {
+      def.apply(hiddenInput.value ? hiddenInput.value.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : []);
+      renderTable();
+    });
+
+    container.appendChild(field);
+  });
 }
 
 function renderSkeleton(cols, rows) {
@@ -56,18 +89,11 @@ function renderTable() {
   thActions.className = 'row-actions-col';
   headRow.appendChild(thActions);
 
-  state.headers.forEach(function (label, colIndex) {
+  state.headers.forEach(function (label) {
     const th = document.createElement('th');
     const wrap = document.createElement('div');
     wrap.className = 'header-cell';
-
-    const input = document.createElement('input');
-    input.className = 'header-input';
-    input.value = label;
-    input.setAttribute('aria-label', 'Nom de la columna ' + (colIndex + 1));
-    input.addEventListener('change', function () { renameColumn(colIndex, input.value); });
-
-    wrap.appendChild(input);
+    wrap.textContent = label;
     th.appendChild(wrap);
     headRow.appendChild(th);
   });
@@ -77,11 +103,15 @@ function renderTable() {
 
   const tbody = document.createElement('tbody');
   const query = normalizeText(state.filterQuery).trim();
+  const masiaColIndex = state.headers.indexOf('Masia');
+  const anyColIndex = state.headers.indexOf('Any');
   const visible = state.rows
     .map(function (row, rowIndex) { return { row: row, rowIndex: rowIndex }; })
     .filter(function (item) {
-      if (!query) return true;
-      return item.row.some(function (cell) { return normalizeText(cell).indexOf(query) !== -1; });
+      if (query && !item.row.some(function (cell) { return normalizeText(cell).indexOf(query) !== -1; })) return false;
+      if (!rowMatchesValueFilter(item.row, masiaColIndex, state.filterMasia)) return false;
+      if (!rowMatchesValueFilter(item.row, anyColIndex, state.filterAny)) return false;
+      return true;
     });
 
   if (!state.rows.length) {
@@ -97,7 +127,9 @@ function renderTable() {
     tr.className = 'empty-row';
     const td = document.createElement('td');
     td.colSpan = state.headers.length + 1;
-    td.textContent = 'Cap fila coincideix amb "' + state.filterQuery + '".';
+    td.textContent = state.filterQuery
+      ? 'Cap fila coincideix amb "' + state.filterQuery + '".'
+      : 'Cap fila coincideix amb els filtres seleccionats.';
     tr.appendChild(td);
     tbody.appendChild(tr);
   }
