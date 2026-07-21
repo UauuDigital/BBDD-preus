@@ -121,9 +121,3 @@ function translateServiceName(text, sourceHeader) {
   });
   return translations;
 }
-
-function deleteColumn(sheetName, colIndex) {
-  const sheet = getSheetOrThrow_(sheetName);
-  sheet.deleteColumn(colIndex + 1);
-  return true;
-}

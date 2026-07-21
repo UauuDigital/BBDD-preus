@@ -89,12 +89,3 @@ function handleAddColumn() {
     .withFailureHandler(onError)
     .addColumn(state.currentName, label);
 }
-
-function handleDeleteColumn(colIndex, label) {
-  if (!confirm('Segur que vols esborrar la columna "' + label + '"? S\'esborraran totes les dades d\'aquesta columna.')) return;
-  setStatus('Esborrant columna...', 'loading');
-  google.script.run
-    .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
-    .deleteColumn(state.currentName, colIndex);
-}

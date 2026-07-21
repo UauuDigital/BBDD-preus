@@ -52,6 +52,10 @@ function renderTable() {
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
 
+  const thActions = document.createElement('th');
+  thActions.className = 'row-actions-col';
+  headRow.appendChild(thActions);
+
   state.headers.forEach(function (label, colIndex) {
     const th = document.createElement('th');
     const wrap = document.createElement('div');
@@ -63,23 +67,11 @@ function renderTable() {
     input.setAttribute('aria-label', 'Nom de la columna ' + (colIndex + 1));
     input.addEventListener('change', function () { renameColumn(colIndex, input.value); });
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'icon-btn';
-    del.title = 'Esborra columna';
-    del.setAttribute('aria-label', 'Esborra la columna "' + label + '"');
-    del.innerHTML = ICONS.trash;
-    del.addEventListener('click', function () { handleDeleteColumn(colIndex, label); });
-
     wrap.appendChild(input);
-    wrap.appendChild(del);
     th.appendChild(wrap);
     headRow.appendChild(th);
   });
 
-  const thActions = document.createElement('th');
-  thActions.className = 'row-actions-col';
-  headRow.appendChild(thActions);
   thead.appendChild(headRow);
   table.appendChild(thead);
 
@@ -114,6 +106,19 @@ function renderTable() {
     const row = item.row;
     const rowIndex = item.rowIndex;
     const tr = document.createElement('tr');
+
+    const tdActions = document.createElement('td');
+    tdActions.className = 'row-actions-col';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'icon-btn';
+    del.title = 'Esborra fila';
+    del.setAttribute('aria-label', 'Esborra la fila ' + (rowIndex + 1));
+    del.innerHTML = ICONS.trash;
+    del.addEventListener('click', function () { handleDeleteRow(rowIndex); });
+    tdActions.appendChild(del);
+    tr.appendChild(tdActions);
+
     row.forEach(function (value, colIndex) {
       const td = document.createElement('td');
       const input = document.createElement('input');
@@ -131,18 +136,6 @@ function renderTable() {
       td.appendChild(input);
       tr.appendChild(td);
     });
-
-    const tdActions = document.createElement('td');
-    tdActions.className = 'row-actions-col';
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'icon-btn';
-    del.title = 'Esborra fila';
-    del.setAttribute('aria-label', 'Esborra la fila ' + (rowIndex + 1));
-    del.innerHTML = ICONS.trash;
-    del.addEventListener('click', function () { handleDeleteRow(rowIndex); });
-    tdActions.appendChild(del);
-    tr.appendChild(tdActions);
 
     tbody.appendChild(tr);
   });
