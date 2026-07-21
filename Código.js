@@ -44,8 +44,25 @@ function getSheetData(sheetName) {
   return { headers: values[0], rows: values.slice(1) };
 }
 
+// Nom de la columna que conté l'identificador autogenerat de cada fila
+// (es compara ignorant majúscules/minúscules). Aquesta columna no
+// s'ofereix mai com a editable: ni al formulari de nova fila (es genera
+// un UUID nou) ni des de la taula (updateCell la rebutja).
+const ID_HEADER = 'id';
+
+function isIdHeader_(header) {
+  return String(header).trim().toLowerCase() === ID_HEADER;
+}
+
+function isIdColumn_(sheet, colIndex) {
+  return isIdHeader_(sheet.getRange(1, colIndex + 1).getValue());
+}
+
 function updateCell(sheetName, rowIndex, colIndex, value) {
   const sheet = getSheetOrThrow_(sheetName);
+  if (isIdColumn_(sheet, colIndex)) {
+    throw new Error('La columna d\'identificador es genera automàticament i no es pot editar.');
+  }
   sheet.getRange(rowIndex + 2, colIndex + 1).setValue(value);
   return true;
 }
@@ -56,11 +73,16 @@ function renameHeader(sheetName, colIndex, label) {
   return true;
 }
 
-function appendRow(sheetName, numCols) {
+function appendRow(sheetName, values) {
   const sheet = getSheetOrThrow_(sheetName);
   const newRow = sheet.getLastRow() + 1;
-  if (numCols > 0) {
-    sheet.getRange(newRow, 1, 1, numCols).setValue('');
+  if (values.length > 0) {
+    const headers = sheet.getRange(1, 1, 1, values.length).getValues()[0];
+    const finalValues = values.map(function (value, colIndex) {
+      if (!isIdHeader_(headers[colIndex])) return value;
+      return value || Utilities.getUuid();
+    });
+    sheet.getRange(newRow, 1, 1, finalValues.length).setValues([finalValues]);
   }
   return true;
 }
@@ -76,6 +98,28 @@ function addColumn(sheetName, label) {
   const newCol = sheet.getLastColumn() + 1;
   sheet.getRange(1, newCol).setValue(label);
   return true;
+}
+
+// Relaciona cada capçalera de nom de servei amb el seu codi d'idioma,
+// per poder traduir-les entre elles amb el traductor integrat d'Apps
+// Script (LanguageApp), sense necessitat de cap API key.
+const SERVICE_NAME_LANGS = {
+  'Nom Servei': 'ca',
+  'NomCAST': 'es',
+  'NomENG': 'en',
+};
+
+function translateServiceName(text, sourceHeader) {
+  const sourceLang = SERVICE_NAME_LANGS[sourceHeader];
+  if (!text || !sourceLang) return {};
+
+  const translations = {};
+  Object.keys(SERVICE_NAME_LANGS).forEach(function (header) {
+    const targetLang = SERVICE_NAME_LANGS[header];
+    if (targetLang === sourceLang) return;
+    translations[header] = LanguageApp.translate(text, sourceLang, targetLang);
+  });
+  return translations;
 }
 
 function deleteColumn(sheetName, colIndex) {

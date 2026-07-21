@@ -1,0 +1,168 @@
+/* ---------------------------------------------------------
+   Modal — formulari de nova fila
+   --------------------------------------------------------- */
+.modal {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0;
+  width: min(480px, calc(100vw - var(--space-6) * 2));
+  box-shadow: 0 12px 32px rgba(28, 28, 26, 0.18);
+}
+
+.modal::backdrop {
+  background: rgba(28, 28, 26, 0.35);
+}
+
+.modal-title {
+  margin: 0;
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: var(--text-display);
+  color: var(--fg-primary);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-field label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.modal-field input,
+.modal-field select {
+  width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+}
+
+.modal-field input:hover,
+.modal-field select:hover { border-color: var(--color-sand-dark); }
+.modal-field input:focus,
+.modal-field select:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+
+.modal-field-readonly input {
+  background: var(--bg-surface);
+  color: var(--fg-tertiary);
+  cursor: default;
+}
+.modal-field-readonly input:hover { border-color: var(--border-default); }
+.modal-field-readonly input:focus { box-shadow: none; }
+
+/* ---------------------------------------------------------
+   Multiselecció (p.ex. camp "Masia")
+   --------------------------------------------------------- */
+.multiselect {
+  position: relative;
+}
+
+.multiselect-trigger {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+  cursor: pointer;
+}
+.multiselect-trigger:hover { border-color: var(--color-sand-dark); }
+.multiselect-trigger:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+.multiselect-trigger:disabled {
+  color: var(--fg-tertiary);
+  cursor: default;
+  background: var(--bg-surface);
+}
+
+.multiselect-panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-2);
+}
+
+.multiselect-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.multiselect-option:hover { background: var(--bg-surface); }
+
+/* ---------------------------------------------------------
+   Camp de moneda
+   --------------------------------------------------------- */
+.currency-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-field input {
+  padding-right: calc(var(--space-3) + 1.25em);
+}
+
+.currency-suffix {
+  position: absolute;
+  right: var(--space-3);
+  color: var(--fg-tertiary);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------
+   Camp de casella de verificació
+   --------------------------------------------------------- */
+.checkbox-field {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-default);
+}

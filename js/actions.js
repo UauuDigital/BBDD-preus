@@ -67,11 +67,7 @@ function renameColumn(colIndex, newLabel) {
 }
 
 function handleAddRow() {
-  setStatus('Afegint fila...', 'loading');
-  google.script.run
-    .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
-    .appendRow(state.currentName, state.headers.length || 1);
+  openAddRowModal();
 }
 
 function handleDeleteRow(rowIndex) {

@@ -1,3 +1,11 @@
+// Nom de la columna d'identificador autogenerat (mateixa lògica que
+// isIdHeader_ a Código.js: es compara ignorant majúscules/minúscules).
+// No s'ofereix mai com a editable.
+const ID_HEADER = 'id';
+function isIdHeader(header) {
+  return String(header == null ? '' : header).trim().toLowerCase() === ID_HEADER;
+}
+
 /* Etiquetes i explicacions llegibles per a cada pestanya del Sheet.
    Els noms de full (claus) no es toquen — només com es mostren aquí.
    Si un full no hi surt (o li canvies el nom a Google Sheets), es mostra

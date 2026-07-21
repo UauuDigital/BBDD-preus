@@ -121,8 +121,13 @@ function renderTable() {
       input.value = value;
       input.dataset.original = value;
       input.setAttribute('aria-label', (state.headers[colIndex] || 'Columna ' + (colIndex + 1)) + ', fila ' + (rowIndex + 1));
-      input.addEventListener('input', function () { input.classList.add('dirty'); });
-      input.addEventListener('change', function () { saveCell(input, rowIndex, colIndex); });
+      if (isIdHeader(state.headers[colIndex])) {
+        input.readOnly = true;
+        input.classList.add('cell-input-readonly');
+      } else {
+        input.addEventListener('input', function () { input.classList.add('dirty'); });
+        input.addEventListener('change', function () { saveCell(input, rowIndex, colIndex); });
+      }
       td.appendChild(input);
       tr.appendChild(td);
     });
