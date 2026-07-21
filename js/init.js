@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('addRowForm').addEventListener('submit', submitAddRowForm);
   document.getElementById('addRowCancelBtn').addEventListener('click', closeAddRowModal);
+  document.getElementById('addRowNextBtn').addEventListener('click', handleModalNext);
+  document.getElementById('addRowBackBtn').addEventListener('click', handleModalBack);
 
   renderSkeleton(3, 5);
   loadMeta();

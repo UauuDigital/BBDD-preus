@@ -26,11 +26,17 @@
 
 <dialog id="addRowModal" class="modal">
   <form id="addRowForm" method="dialog">
-    <h2 class="modal-title">Nova fila</h2>
+    <div class="modal-header">
+      <h2 id="addRowTitle" class="modal-title">Nova fila</h2>
+      <p id="addRowStep" class="modal-step"></p>
+    </div>
     <div id="addRowFields" class="modal-fields"></div>
     <div class="modal-actions">
       <button type="button" id="addRowCancelBtn" class="btn btn-ghost">Cancel·la</button>
-      <button type="submit" class="btn btn-primary">Crea la fila</button>
+      <span class="modal-actions-spacer"></span>
+      <button type="button" id="addRowBackBtn" class="btn btn-ghost" hidden>Enrere</button>
+      <button type="button" id="addRowNextBtn" class="btn btn-primary" hidden>Següent</button>
+      <button type="submit" id="addRowSubmitBtn" class="btn btn-primary" hidden>Crea la fila</button>
     </div>
   </form>
 </dialog>

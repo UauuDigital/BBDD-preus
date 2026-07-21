@@ -440,22 +440,40 @@ td.row-actions-col { padding: 0 var(--space-2); }
   padding: 0;
   width: min(480px, calc(100vw - var(--space-6) * 2));
   box-shadow: 0 12px 32px rgba(28, 28, 26, 0.18);
+  transition: width var(--duration) var(--ease-out);
+}
+
+.modal.modal-wide {
+  width: min(720px, calc(100vw - var(--space-6) * 2));
 }
 
 .modal::backdrop {
   background: rgba(28, 28, 26, 0.35);
 }
 
+.modal-header {
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+}
+
 .modal-title {
   margin: 0;
-  padding: var(--space-5) var(--space-6) var(--space-4);
   font-family: var(--font-display);
   font-weight: 500;
   font-style: italic;
   font-size: var(--text-display);
   color: var(--fg-primary);
-  border-bottom: 1px solid var(--border-default);
 }
+
+.modal-step {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+.modal-step:empty { display: none; }
 
 .modal-fields {
   display: flex;
@@ -592,13 +610,90 @@ td.row-actions-col { padding: 0 var(--space-2); }
   cursor: pointer;
 }
 
+/* ---------------------------------------------------------
+   Pas de desglossament (Desplegable / Llindà / Altres Extres)
+   --------------------------------------------------------- */
+.breakdown-section {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-default);
+}
+.breakdown-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.section-heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+.modal-fields-nested {
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.switch-option-group {
+  margin-bottom: var(--space-4);
+}
+.switch-option-group:last-child { margin-bottom: 0; }
+
+.switch-option-heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+.desplegable-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+}
+.desplegable-table td {
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--space-2);
+}
+.desplegable-table td:last-child { width: 32px; text-align: center; }
+
+.desplegable-empty {
+  color: var(--fg-tertiary);
+  text-align: center;
+  padding: var(--space-3) !important;
+}
+
+.desplegable-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 0.8fr auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.desplegable-form input {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .desplegable-form { grid-template-columns: 1fr 1fr; }
+}
+
 .modal-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6) var(--space-5);
   border-top: 1px solid var(--border-default);
 }
+
+.modal-actions-spacer { flex: 1; }
 </style>
 </head>
 <body>
@@ -630,11 +725,17 @@ td.row-actions-col { padding: 0 var(--space-2); }
 
 <dialog id="addRowModal" class="modal">
   <form id="addRowForm" method="dialog">
-    <h2 class="modal-title">Nova fila</h2>
+    <div class="modal-header">
+      <h2 id="addRowTitle" class="modal-title">Nova fila</h2>
+      <p id="addRowStep" class="modal-step"></p>
+    </div>
     <div id="addRowFields" class="modal-fields"></div>
     <div class="modal-actions">
       <button type="button" id="addRowCancelBtn" class="btn btn-ghost">Cancel·la</button>
-      <button type="submit" class="btn btn-primary">Crea la fila</button>
+      <span class="modal-actions-spacer"></span>
+      <button type="button" id="addRowBackBtn" class="btn btn-ghost" hidden>Enrere</button>
+      <button type="button" id="addRowNextBtn" class="btn btn-primary" hidden>Següent</button>
+      <button type="submit" id="addRowSubmitBtn" class="btn btn-primary" hidden>Crea la fila</button>
     </div>
   </form>
 </dialog>
@@ -869,8 +970,12 @@ function getDistinctColumnValues(colIndex, splitCombined) {
   return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, 'ca'); });
 }
 
-function buildMultiselectField(colIndex) {
-  const options = getDistinctColumnValues(colIndex, true);
+function buildMultiselectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
+  const initialSelection = String(initialValue || '')
+    .split(',')
+    .map(function (part) { return part.trim(); })
+    .filter(Boolean);
 
   const wrap = document.createElement('div');
   wrap.className = 'multiselect';
@@ -878,7 +983,9 @@ function buildMultiselectField(colIndex) {
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.className = 'multiselect-trigger';
-  trigger.textContent = options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar';
+  trigger.textContent = initialSelection.length
+    ? initialSelection.join(', ')
+    : (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar');
   trigger.disabled = !options.length;
 
   const panel = document.createElement('div');
@@ -888,7 +995,7 @@ function buildMultiselectField(colIndex) {
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = '';
+  hiddenInput.value = initialSelection.join(', ');
 
   function updateSelection() {
     const checked = Array.prototype.filter
@@ -905,6 +1012,7 @@ function buildMultiselectField(colIndex) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.value = option;
+    checkbox.checked = initialSelection.indexOf(option) !== -1;
     checkbox.addEventListener('change', updateSelection);
 
     optionLabel.appendChild(checkbox);
@@ -934,8 +1042,8 @@ document.addEventListener('click', function () {
 // columna (una per cel·la, no combinats amb comes).
 const SELECT_HEADERS = ['Unit'];
 
-function buildSelectField(colIndex) {
-  const options = getDistinctColumnValues(colIndex, false);
+function buildSelectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, false);
 
   const select = document.createElement('select');
   select.id = 'addRowField' + colIndex;
@@ -953,14 +1061,15 @@ function buildSelectField(colIndex) {
     select.appendChild(optionEl);
   });
 
+  if (initialValue) select.value = initialValue;
   return select;
 }
 // Capçaleres booleanes: es mostren com a casella de verificació. El
 // valor desat a la cel·la és "TRUE"/"FALSE" (el mateix format que fa
 // servir Google Sheets per a les seves pròpies caselles de verificació).
-const CHECKBOX_HEADERS = ['perConvidat', 'Optional', 'Extres', 'Desplegable'];
+const CHECKBOX_HEADERS = ['perConvidat', 'Optional', 'quantityBased', 'Extres', 'Desplegable'];
 
-function buildCheckboxField(colIndex) {
+function buildCheckboxField(colIndex, initialValue) {
   const wrap = document.createElement('div');
   wrap.className = 'checkbox-field';
 
@@ -968,14 +1077,15 @@ function buildCheckboxField(colIndex) {
   checkbox.type = 'checkbox';
   checkbox.id = 'addRowField' + colIndex;
   checkbox.dataset.colIndex = String(colIndex);
+  checkbox.checked = initialValue === 'TRUE';
 
   wrap.appendChild(checkbox);
   return wrap;
 }
 // Capçaleres de moneda: es mostren com a camp numèric amb sufix "€".
-const CURRENCY_HEADERS = ['Preu', 'Llindà Principi', 'Llindà Final', 'Llindà preu X<0', 'Llindà preu 0<X'];
+const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X'];
 
-function buildCurrencyField(colIndex) {
+function buildCurrencyField(colIndex, initialValue) {
   const wrap = document.createElement('div');
   wrap.className = 'currency-field';
 
@@ -984,6 +1094,7 @@ function buildCurrencyField(colIndex) {
   input.step = '0.01';
   input.id = 'addRowField' + colIndex;
   input.dataset.colIndex = String(colIndex);
+  if (initialValue) input.value = initialValue;
 
   const suffix = document.createElement('span');
   suffix.className = 'currency-suffix';
@@ -1009,75 +1120,598 @@ function getYearOptions() {
   return years;
 }
 
-function buildYearField(colIndex) {
+function buildYearField(colIndex, initialValue) {
   const select = document.createElement('select');
   select.id = 'addRowField' + colIndex;
   select.dataset.colIndex = String(colIndex);
 
-  const currentYear = new Date().getFullYear();
+  const selectedYear = initialValue ? Number(initialValue) : new Date().getFullYear();
   getYearOptions().forEach(function (year) {
     const option = document.createElement('option');
     option.value = String(year);
     option.textContent = String(year);
-    if (year === currentYear) option.selected = true;
+    if (year === selectedYear) option.selected = true;
     select.appendChild(option);
   });
 
   return select;
 }
+// Secció "Llindà" del pas de desglossament: Principi/Final són numèrics,
+// els dos preus són de moneda (reutilitza buildCurrencyField).
+const LLINDA_HEADERS = {
+  principi: 'Llindà Principi',
+  final: 'Llindà Final',
+  negatiu: 'Llindà preu X<0',
+  positiu: 'Llindà preu 0<X',
+};
+
+function buildNumberField(colIndex, initialValue) {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.id = 'addRowField' + colIndex;
+  input.dataset.colIndex = String(colIndex);
+  if (initialValue) input.value = initialValue;
+  return input;
+}
+
+function buildLlindaSection() {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Llindà';
+  container.appendChild(heading);
+
+  const fieldsGrid = document.createElement('div');
+  fieldsGrid.className = 'modal-fields modal-fields-nested';
+
+  [
+    { header: LLINDA_HEADERS.principi, build: buildNumberField },
+    { header: LLINDA_HEADERS.final, build: buildNumberField },
+    { header: LLINDA_HEADERS.negatiu, build: buildCurrencyField },
+    { header: LLINDA_HEADERS.positiu, build: buildCurrencyField },
+  ].forEach(function (def) {
+    const colIndex = state.headers.indexOf(def.header);
+    if (colIndex === -1) return;
+    appendField(fieldsGrid, colIndex, def.header, def.build(colIndex, modalValues[colIndex]));
+  });
+
+  container.appendChild(fieldsGrid);
+  return container;
+}
+// Secció "Desplegable" del pas de desglossament: permet construir una
+// llista d'opcions (nom en 3 idiomes + preu) que es desa a la cel·la
+// com a JSON: [{"CAT":"...","CAST":"...","ENG":"...","PREU":123}, ...]
+const DESPLEGABLE_HEADER = 'Desplegable';
+
+function parseDesplegableItems(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function buildDesplegableSection(colIndex) {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Desplegable';
+  container.appendChild(heading);
+
+  const items = parseDesplegableItems(modalValues[colIndex]);
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.dataset.colIndex = String(colIndex);
+  hiddenInput.value = JSON.stringify(items);
+
+  const table = document.createElement('table');
+  table.className = 'desplegable-table';
+  const tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+
+  function renderRows() {
+    tbody.innerHTML = '';
+    if (!items.length) {
+      const emptyRow = document.createElement('tr');
+      const emptyCell = document.createElement('td');
+      emptyCell.colSpan = 5;
+      emptyCell.className = 'desplegable-empty';
+      emptyCell.textContent = 'Encara no s\'ha afegit cap opció.';
+      emptyRow.appendChild(emptyCell);
+      tbody.appendChild(emptyRow);
+      return;
+    }
+    items.forEach(function (item, index) {
+      const tr = document.createElement('tr');
+      [item.CAT, item.CAST, item.ENG, item.PREU + ' €'].forEach(function (text) {
+        const td = document.createElement('td');
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      const tdActions = document.createElement('td');
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'icon-btn';
+      removeBtn.title = 'Esborra aquesta opció';
+      removeBtn.innerHTML = ICONS.trash;
+      removeBtn.addEventListener('click', function () {
+        items.splice(index, 1);
+        hiddenInput.value = JSON.stringify(items);
+        renderRows();
+      });
+      tdActions.appendChild(removeBtn);
+      tr.appendChild(tdActions);
+      tbody.appendChild(tr);
+    });
+  }
+  renderRows();
+
+  const form = document.createElement('div');
+  form.className = 'desplegable-form';
+
+  const catInput = document.createElement('input');
+  catInput.type = 'text';
+  catInput.placeholder = 'Català';
+
+  const castInput = document.createElement('input');
+  castInput.type = 'text';
+  castInput.placeholder = 'Castellà';
+
+  const engInput = document.createElement('input');
+  engInput.type = 'text';
+  engInput.placeholder = 'Anglès';
+
+  const priceWrap = document.createElement('div');
+  priceWrap.className = 'currency-field';
+  const priceInput = document.createElement('input');
+  priceInput.type = 'number';
+  priceInput.step = '0.01';
+  priceInput.placeholder = 'Preu';
+  const priceSuffix = document.createElement('span');
+  priceSuffix.className = 'currency-suffix';
+  priceSuffix.textContent = '€';
+  priceWrap.appendChild(priceInput);
+  priceWrap.appendChild(priceSuffix);
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'btn btn-primary';
+  addBtn.textContent = 'Afegeix a la taula';
+  addBtn.addEventListener('click', function () {
+    if (!catInput.value.trim() || !castInput.value.trim() || !engInput.value.trim() || priceInput.value === '') return;
+    items.push({
+      CAT: catInput.value.trim(),
+      CAST: castInput.value.trim(),
+      ENG: engInput.value.trim(),
+      PREU: Number(priceInput.value),
+    });
+    hiddenInput.value = JSON.stringify(items);
+    renderRows();
+    catInput.value = '';
+    castInput.value = '';
+    engInput.value = '';
+    priceInput.value = '';
+    catInput.focus();
+  });
+
+  form.appendChild(catInput);
+  form.appendChild(castInput);
+  form.appendChild(engInput);
+  form.appendChild(priceWrap);
+  form.appendChild(addBtn);
+
+  container.appendChild(table);
+  container.appendChild(form);
+  container.appendChild(hiddenInput);
+  return container;
+}
+// Pas 5 (condicional): secció "Input Númeric" (Unitat + Preu, desat a
+// ExtraUnitat com a JSON) i secció "Switch" (dues opcions CAT/CAST/ENG
+// + Preu, desades a ExtraSwitch com a JSON).
+
+function buildInputNumericSection(colIndex) {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Input Númeric';
+  container.appendChild(heading);
+
+  let current = {};
+  try { current = JSON.parse(modalValues[colIndex] || '{}'); } catch (e) { current = {}; }
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.dataset.colIndex = String(colIndex);
+
+  function sync() {
+    hiddenInput.value = JSON.stringify({
+      Unitat: unitatInput.value,
+      Preu: preuInput.value === '' ? '' : Number(preuInput.value),
+    });
+  }
+
+  const fieldsGrid = document.createElement('div');
+  fieldsGrid.className = 'modal-fields modal-fields-nested';
+
+  const unitatInput = document.createElement('input');
+  unitatInput.type = 'text';
+  unitatInput.value = current.Unitat || '';
+  unitatInput.addEventListener('input', sync);
+  appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
+
+  const preuWrap = document.createElement('div');
+  preuWrap.className = 'currency-field';
+  const preuInput = document.createElement('input');
+  preuInput.type = 'number';
+  preuInput.step = '0.01';
+  preuInput.value = current.Preu === undefined ? '' : current.Preu;
+  preuInput.addEventListener('input', sync);
+  const preuSuffix = document.createElement('span');
+  preuSuffix.className = 'currency-suffix';
+  preuSuffix.textContent = '€';
+  preuWrap.appendChild(preuInput);
+  preuWrap.appendChild(preuSuffix);
+  appendField(fieldsGrid, colIndex, 'Preu', preuWrap);
+
+  sync();
+  container.appendChild(fieldsGrid);
+  container.appendChild(hiddenInput);
+  return container;
+}
+
+function buildSwitchOptionGroup(label, optionData, onChange) {
+  const group = document.createElement('div');
+  group.className = 'switch-option-group';
+
+  const heading = document.createElement('h4');
+  heading.className = 'switch-option-heading';
+  heading.textContent = label;
+  group.appendChild(heading);
+
+  const fieldsGrid = document.createElement('div');
+  fieldsGrid.className = 'modal-fields modal-fields-nested';
+
+  [
+    { key: 'CAT', label: 'Català', type: 'text' },
+    { key: 'CAST', label: 'Castellà', type: 'text' },
+    { key: 'ENG', label: 'Anglès', type: 'text' },
+    { key: 'PREU', label: 'Preu', type: 'currency' },
+  ].forEach(function (def) {
+    let control;
+    if (def.type === 'currency') {
+      const wrap = document.createElement('div');
+      wrap.className = 'currency-field';
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.01';
+      input.value = optionData[def.key] === undefined ? '' : optionData[def.key];
+      input.addEventListener('input', function () {
+        optionData[def.key] = input.value === '' ? '' : Number(input.value);
+        onChange();
+      });
+      const suffix = document.createElement('span');
+      suffix.className = 'currency-suffix';
+      suffix.textContent = '€';
+      wrap.appendChild(input);
+      wrap.appendChild(suffix);
+      control = wrap;
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = optionData[def.key] || '';
+      input.addEventListener('input', function () {
+        optionData[def.key] = input.value;
+        onChange();
+      });
+      control = input;
+    }
+
+    const field = document.createElement('div');
+    field.className = 'modal-field';
+    const fieldLabel = document.createElement('label');
+    fieldLabel.textContent = def.label;
+    field.appendChild(fieldLabel);
+    field.appendChild(control);
+    fieldsGrid.appendChild(field);
+  });
+
+  group.appendChild(fieldsGrid);
+  return group;
+}
+
+function buildSwitchSection(colIndex) {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Switch';
+  container.appendChild(heading);
+
+  let current = {};
+  try { current = JSON.parse(modalValues[colIndex] || '{}'); } catch (e) { current = {}; }
+  current.Opcio1 = current.Opcio1 || {};
+  current.Opcio2 = current.Opcio2 || {};
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.dataset.colIndex = String(colIndex);
+
+  function sync() { hiddenInput.value = JSON.stringify(current); }
+
+  container.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
+  container.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  container.appendChild(hiddenInput);
+
+  sync();
+  return container;
+}
 // Capçaleres de nom de servei que es tradueixen automàticament entre
 // elles (ha de coincidir amb SERVICE_NAME_LANGS a Código.js).
 const SERVICE_NAME_HEADERS = ['Nom Servei', 'NomCAST', 'NomENG'];
 
+// Pantalles fixes del formulari de nova fila (només mostren les
+// columnes de la seva llista que existeixin al full actual).
+const FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Nom Servei', 'NomCAST', 'NomENG', 'Masia', 'Any', 'Preu'] },
+  { title: 'Opcions', headers: ['perConvidat', 'Optional', 'quantityBased', 'Extres'] },
+];
+
+// Pas 3 (condicional): cada camp només apareix si la casella de la
+// columna "conditionHeader" (pas "Opcions") s'ha marcat.
+const DETAIL_STEP_FIELDS = [
+  { header: 'Unit', conditionHeader: 'quantityBased', kind: 'select', options: ['Pack', 'Persona'] },
+  { header: 'ExtresLlista', conditionHeader: 'Extres', kind: 'multiselect', options: ['Desplegable', 'Llindà', 'Altres Extres'] },
+];
+
+// Índexs de pas (fixos: 0 i 1 sempre existeixen; 2, 3 i 4 són condicionals).
+const STEP_GENERAL = 0;
+const STEP_OPTIONS = 1;
+const STEP_DETAILS = 2;
+const STEP_BREAKDOWN = 3;
+const STEP_EXTRAS = 4;
+
+let modalStepIndex = 0;
+let modalValues = {};
+
+function getStepColIndexes(step) {
+  return step.headers
+    .map(function (header) { return state.headers.indexOf(header); })
+    .filter(function (colIndex) { return colIndex !== -1; });
+}
+
+// Llegeix l'estat actual (encara que no s'hagi capturat a modalValues)
+// d'un camp del pas visible, per decidir en temps real si cal avançar.
+function readLiveValue(colIndex) {
+  const liveEl = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+  if (!liveEl) return modalValues[colIndex];
+  return liveEl.type === 'checkbox' ? (liveEl.checked ? 'TRUE' : 'FALSE') : liveEl.value;
+}
+
+function isDetailsStepNeededLive() {
+  return DETAIL_STEP_FIELDS.some(function (def) {
+    const condColIndex = state.headers.indexOf(def.conditionHeader);
+    return condColIndex !== -1 && readLiveValue(condColIndex) === 'TRUE';
+  });
+}
+
+function getActiveDetailFields() {
+  return DETAIL_STEP_FIELDS.filter(function (def) {
+    const condColIndex = state.headers.indexOf(def.conditionHeader);
+    return condColIndex !== -1
+      && modalValues[condColIndex] === 'TRUE'
+      && state.headers.indexOf(def.header) !== -1;
+  });
+}
+
+function getSelectedExtresLlistaLive() {
+  const colIndex = state.headers.indexOf('ExtresLlista');
+  if (colIndex === -1) return [];
+  const raw = readLiveValue(colIndex) || '';
+  return String(raw).split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+}
+
+function isBreakdownStepNeededLive() {
+  return getSelectedExtresLlistaLive().length > 0;
+}
+
+function getSelectedAltresExtresLive() {
+  const colIndex = state.headers.indexOf('ExtraExtresLlista');
+  if (colIndex === -1) return [];
+  const raw = readLiveValue(colIndex) || '';
+  return String(raw).split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+}
+
+function isExtrasStepNeededLive() {
+  return getSelectedAltresExtresLive().length > 0;
+}
+
 function openAddRowModal() {
-  const modal = document.getElementById('addRowModal');
+  modalStepIndex = STEP_GENERAL;
+  modalValues = {};
+  renderModalStep();
+  document.getElementById('addRowModal').showModal();
+}
+
+function closeAddRowModal() {
+  document.getElementById('addRowModal').close();
+}
+
+function captureStepValues() {
+  document.querySelectorAll('#addRowFields [data-col-index]').forEach(function (el) {
+    const colIndex = Number(el.dataset.colIndex);
+    modalValues[colIndex] = el.type === 'checkbox' ? (el.checked ? 'TRUE' : 'FALSE') : el.value;
+  });
+}
+
+function buildFieldControl(colIndex, label, isId) {
+  const initialValue = modalValues[colIndex];
+
+  if (MULTISELECT_HEADERS.indexOf(label) !== -1) return buildMultiselectField(colIndex, initialValue);
+  if (label === YEAR_HEADER) return buildYearField(colIndex, initialValue);
+  if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
+  if (CHECKBOX_HEADERS.indexOf(label) !== -1) return buildCheckboxField(colIndex, initialValue);
+  if (CURRENCY_HEADERS.indexOf(label) !== -1) return buildCurrencyField(colIndex, initialValue);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = 'addRowField' + colIndex;
+  input.dataset.colIndex = String(colIndex);
+  if (isId) {
+    input.value = crypto.randomUUID();
+    input.readOnly = true;
+  } else {
+    if (initialValue) input.value = initialValue;
+    if (SERVICE_NAME_HEADERS.indexOf(label) !== -1) {
+      input.dataset.langHeader = label;
+      input.addEventListener('input', debounce(handleServiceNameInput, 400));
+    }
+  }
+  return input;
+}
+
+function appendField(container, colIndex, label, control) {
+  const field = document.createElement('div');
+  field.className = 'modal-field' + (isIdHeader(label) ? ' modal-field-readonly' : '');
+
+  const fieldLabel = document.createElement('label');
+  fieldLabel.textContent = label || 'Columna ' + (colIndex + 1);
+  fieldLabel.setAttribute('for', 'addRowField' + colIndex);
+
+  field.appendChild(fieldLabel);
+  field.appendChild(control);
+  container.appendChild(field);
+}
+
+function buildAltresExtresSection() {
+  const colIndex = state.headers.indexOf('ExtraExtresLlista');
+  if (colIndex === -1) return null;
+
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Altres Extres';
+  container.appendChild(heading);
+
+  const fieldsGrid = document.createElement('div');
+  fieldsGrid.className = 'modal-fields modal-fields-nested';
+  const control = buildMultiselectField(colIndex, modalValues[colIndex], ['Input Númeric', 'Switch']);
+  appendField(fieldsGrid, colIndex, 'ExtraExtresLlista', control);
+  control.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+    checkbox.addEventListener('change', updateModalNavButtons);
+  });
+  container.appendChild(fieldsGrid);
+  return container;
+}
+
+function renderModalStep() {
   const fieldsWrap = document.getElementById('addRowFields');
   fieldsWrap.innerHTML = '';
 
-  state.headers.forEach(function (label, colIndex) {
-    const isId = isIdHeader(label);
+  const titles = ['Informació general', 'Opcions', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+  document.getElementById('addRowTitle').textContent = 'Nova fila';
+  document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + titles[modalStepIndex];
+  document.getElementById('addRowModal').classList.toggle(
+    'modal-wide', modalStepIndex === STEP_BREAKDOWN || modalStepIndex === STEP_EXTRAS
+  );
 
-    const field = document.createElement('div');
-    field.className = 'modal-field' + (isId ? ' modal-field-readonly' : '');
-
-    const fieldLabel = document.createElement('label');
-    fieldLabel.textContent = label || 'Columna ' + (colIndex + 1);
-    fieldLabel.setAttribute('for', 'addRowField' + colIndex);
-
-    let control;
-    if (MULTISELECT_HEADERS.indexOf(label) !== -1) {
-      control = buildMultiselectField(colIndex);
-    } else if (label === YEAR_HEADER) {
-      control = buildYearField(colIndex);
-    } else if (SELECT_HEADERS.indexOf(label) !== -1) {
-      control = buildSelectField(colIndex);
-    } else if (CHECKBOX_HEADERS.indexOf(label) !== -1) {
-      control = buildCheckboxField(colIndex);
-    } else if (CURRENCY_HEADERS.indexOf(label) !== -1) {
-      control = buildCurrencyField(colIndex);
-    } else {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.id = 'addRowField' + colIndex;
-      input.dataset.colIndex = String(colIndex);
-      if (isId) {
-        input.value = crypto.randomUUID();
-        input.readOnly = true;
-      } else if (SERVICE_NAME_HEADERS.indexOf(label) !== -1) {
-        input.dataset.langHeader = label;
-        input.addEventListener('input', debounce(handleServiceNameInput, 400));
-      }
-      control = input;
+  if (modalStepIndex === STEP_EXTRAS) {
+    const selectedExtras = getSelectedAltresExtresLive();
+    if (selectedExtras.indexOf('Input Númeric') !== -1) {
+      const colIndex = state.headers.indexOf('ExtraUnitat');
+      if (colIndex !== -1) fieldsWrap.appendChild(buildInputNumericSection(colIndex));
     }
+    if (selectedExtras.indexOf('Switch') !== -1) {
+      const colIndex = state.headers.indexOf('ExtraSwitch');
+      if (colIndex !== -1) fieldsWrap.appendChild(buildSwitchSection(colIndex));
+    }
+  } else if (modalStepIndex === STEP_BREAKDOWN) {
+    const selected = getSelectedExtresLlistaLive();
+    if (selected.indexOf('Desplegable') !== -1) {
+      const colIndex = state.headers.indexOf(DESPLEGABLE_HEADER);
+      if (colIndex !== -1) fieldsWrap.appendChild(buildDesplegableSection(colIndex));
+    }
+    if (selected.indexOf('Llindà') !== -1) {
+      fieldsWrap.appendChild(buildLlindaSection());
+    }
+    if (selected.indexOf('Altres Extres') !== -1) {
+      const section = buildAltresExtresSection();
+      if (section) fieldsWrap.appendChild(section);
+    }
+  } else if (modalStepIndex === STEP_DETAILS) {
+    getActiveDetailFields().forEach(function (def) {
+      const colIndex = state.headers.indexOf(def.header);
+      const initialValue = modalValues[colIndex];
+      const control = def.kind === 'select'
+        ? buildSelectField(colIndex, initialValue, def.options)
+        : buildMultiselectField(colIndex, initialValue, def.options);
+      appendField(fieldsWrap, colIndex, def.header, control);
 
-    field.appendChild(fieldLabel);
-    field.appendChild(control);
-    fieldsWrap.appendChild(field);
-  });
+      if (def.header === 'ExtresLlista') {
+        control.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+          checkbox.addEventListener('change', updateModalNavButtons);
+        });
+      }
+    });
+  } else {
+    getStepColIndexes(FIELD_STEPS[modalStepIndex]).forEach(function (colIndex) {
+      const label = state.headers[colIndex];
+      appendField(fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)));
+    });
 
-  modal.showModal();
-  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"])');
+    if (modalStepIndex === STEP_OPTIONS) {
+      ['quantityBased', 'Extres'].forEach(function (header) {
+        const colIndex = state.headers.indexOf(header);
+        if (colIndex === -1) return;
+        const checkbox = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+        if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
+      });
+    }
+  }
+
+  updateModalNavButtons();
+  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"]), select');
   if (firstInput) firstInput.focus();
+}
+
+function isLastStep() {
+  if (modalStepIndex === STEP_GENERAL) return false;
+  if (modalStepIndex === STEP_OPTIONS) return !isDetailsStepNeededLive();
+  if (modalStepIndex === STEP_DETAILS) return !isBreakdownStepNeededLive();
+  if (modalStepIndex === STEP_BREAKDOWN) return !isExtrasStepNeededLive();
+  return true;
+}
+
+function updateModalNavButtons() {
+  const isFirst = modalStepIndex === STEP_GENERAL;
+  const isLast = isLastStep();
+  document.getElementById('addRowBackBtn').hidden = isFirst;
+  document.getElementById('addRowNextBtn').hidden = isLast;
+  document.getElementById('addRowSubmitBtn').hidden = !isLast;
+}
+
+function handleModalNext() {
+  captureStepValues();
+  if (isLastStep()) return;
+  modalStepIndex++;
+  renderModalStep();
+}
+
+function handleModalBack() {
+  captureStepValues();
+  if (modalStepIndex === STEP_GENERAL) return;
+  modalStepIndex--;
+  renderModalStep();
 }
 
 function debounce(fn, delayMs) {
@@ -1109,17 +1743,12 @@ function handleServiceNameInput(event) {
     .translateServiceName(text, sourceHeader);
 }
 
-function closeAddRowModal() {
-  document.getElementById('addRowModal').close();
-}
-
 function submitAddRowForm(event) {
   event.preventDefault();
-  const values = state.headers.map(function () { return ''; });
-  document.querySelectorAll('#addRowFields [data-col-index]').forEach(function (input) {
-    values[Number(input.dataset.colIndex)] = input.type === 'checkbox'
-      ? (input.checked ? 'TRUE' : 'FALSE')
-      : input.value;
+  captureStepValues();
+
+  const values = state.headers.map(function (_, colIndex) {
+    return modalValues[colIndex] !== undefined ? modalValues[colIndex] : '';
   });
 
   closeAddRowModal();
@@ -1246,6 +1875,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('addRowForm').addEventListener('submit', submitAddRowForm);
   document.getElementById('addRowCancelBtn').addEventListener('click', closeAddRowModal);
+  document.getElementById('addRowNextBtn').addEventListener('click', handleModalNext);
+  document.getElementById('addRowBackBtn').addEventListener('click', handleModalBack);
 
   renderSkeleton(3, 5);
   loadMeta();

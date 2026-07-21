@@ -19,8 +19,12 @@ function getDistinctColumnValues(colIndex, splitCombined) {
   return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, 'ca'); });
 }
 
-function buildMultiselectField(colIndex) {
-  const options = getDistinctColumnValues(colIndex, true);
+function buildMultiselectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
+  const initialSelection = String(initialValue || '')
+    .split(',')
+    .map(function (part) { return part.trim(); })
+    .filter(Boolean);
 
   const wrap = document.createElement('div');
   wrap.className = 'multiselect';
@@ -28,7 +32,9 @@ function buildMultiselectField(colIndex) {
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.className = 'multiselect-trigger';
-  trigger.textContent = options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar';
+  trigger.textContent = initialSelection.length
+    ? initialSelection.join(', ')
+    : (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar');
   trigger.disabled = !options.length;
 
   const panel = document.createElement('div');
@@ -38,7 +44,7 @@ function buildMultiselectField(colIndex) {
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = '';
+  hiddenInput.value = initialSelection.join(', ');
 
   function updateSelection() {
     const checked = Array.prototype.filter
@@ -55,6 +61,7 @@ function buildMultiselectField(colIndex) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.value = option;
+    checkbox.checked = initialSelection.indexOf(option) !== -1;
     checkbox.addEventListener('change', updateSelection);
 
     optionLabel.appendChild(checkbox);

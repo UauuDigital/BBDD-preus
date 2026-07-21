@@ -3,8 +3,8 @@
 // columna (una per cel·la, no combinats amb comes).
 const SELECT_HEADERS = ['Unit'];
 
-function buildSelectField(colIndex) {
-  const options = getDistinctColumnValues(colIndex, false);
+function buildSelectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, false);
 
   const select = document.createElement('select');
   select.id = 'addRowField' + colIndex;
@@ -22,5 +22,6 @@ function buildSelectField(colIndex) {
     select.appendChild(optionEl);
   });
 
+  if (initialValue) select.value = initialValue;
   return select;
 }

@@ -14,17 +14,17 @@ function getYearOptions() {
   return years;
 }
 
-function buildYearField(colIndex) {
+function buildYearField(colIndex, initialValue) {
   const select = document.createElement('select');
   select.id = 'addRowField' + colIndex;
   select.dataset.colIndex = String(colIndex);
 
-  const currentYear = new Date().getFullYear();
+  const selectedYear = initialValue ? Number(initialValue) : new Date().getFullYear();
   getYearOptions().forEach(function (year) {
     const option = document.createElement('option');
     option.value = String(year);
     option.textContent = String(year);
-    if (year === currentYear) option.selected = true;
+    if (year === selectedYear) option.selected = true;
     select.appendChild(option);
   });
 
