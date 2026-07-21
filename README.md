@@ -11,9 +11,19 @@ Fet amb **Google Apps Script**, integrat directament dins del mateix Google Shee
   que necessita Google Sheets). Es diu així (i no `Code.gs`) perquè és el nom que li vam
   donar quan es va crear des del navegador — clasp sincronitza pel nom real del fitxer al
   projecte d'Apps Script, no es pot canviar sense crear-ne un altre.
-- [`Index.html`](Index.html) és la pàgina que es veu (interfície de la taula editable).
-  Apps Script la serveix directament — no cal cap altre allotjament (GitHub Pages,
-  Cloudflare, etc.).
+- `Index.html` és la pàgina que es veu (interfície de la taula editable). **És un fitxer
+  generat, no s'edita a mà ni es versiona a git**: Apps Script només pot servir un únic
+  fitxer HTML, així que el codi font real viu dividit en:
+  - [`components/`](components) — fragments HTML (`head.html`, `body.html`)
+  - [`css/`](css) — estils per component (`variables.css`, `layout.css`, `toolbar.css`, `table.css`)
+  - [`js/`](js) — lògica per funcionalitat (`icons.js`, `state.js`, `render.js`, `actions.js`, `init.js`)
+  - [`Index.template.html`](Index.template.html) — l'esquelet que indica on va cada tros
+    (marques `<!--INCLUDE:ruta-->`)
+  - [`scripts/build.js`](scripts/build.js) — munta tot això en `Index.html`. S'executa
+    automàticament abans de `npm run push`, `npm run deploy` i `npm run watch` (també es
+    pot llançar a mà amb `npm run build`).
+- Apps Script serveix `Index.html` directament — no cal cap altre allotjament (GitHub
+  Pages, Cloudflare, etc.).
 - No cal Google Cloud Console ni Client ID: l'script fa servir els teus propis permisos
   d'editor sobre el full.
 - Les pestanyes del full (`Hoja 1`, `PreusMenu`, `BarraLliure`, ...) es detecten

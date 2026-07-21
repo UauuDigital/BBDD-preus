@@ -1,0 +1,25 @@
+<header class="topbar">
+  <h1 class="wordmark">BBDD Preus</h1>
+  <span class="eyebrow">UAUU</span>
+</header>
+
+<main class="app">
+  <nav id="tabs" class="tabs" aria-label="Pestanyes del full"></nav>
+  <p id="sheetHint" class="sheet-hint"></p>
+
+  <div class="toolbar">
+    <button id="addRowBtn" class="btn btn-primary" type="button"></button>
+    <button id="addColBtn" class="btn" type="button"></button>
+    <label class="search-field">
+      <span id="searchIcon"></span>
+      <input id="searchInput" class="search-input" type="search" placeholder="Cerca..." aria-label="Cerca dins d'aquest full" />
+    </label>
+    <span class="toolbar-spacer"></span>
+    <span id="statusMsg" class="status" role="status" aria-live="polite"></span>
+    <button id="refreshBtn" class="btn btn-ghost" type="button" aria-label="Refresca"></button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="dataTable"></table>
+  </div>
+</main>

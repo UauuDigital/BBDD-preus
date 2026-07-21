@@ -1,0 +1,88 @@
+/* ---------------------------------------------------------
+   Topbar
+   --------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-style: italic;
+  font-size: var(--text-display);
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--fg-primary);
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+
+/* ---------------------------------------------------------
+   Layout
+   --------------------------------------------------------- */
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+/* ---------------------------------------------------------
+   Tabs — underline style
+   --------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab-btn {
+  position: relative;
+  border: none;
+  background: none;
+  padding: var(--space-2) var(--space-1) var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--fg-tertiary);
+  transition: color var(--duration) var(--ease-out);
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-ink);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.tab-btn:hover { color: var(--fg-primary); }
+.tab-btn.active { color: var(--fg-primary); }
+.tab-btn.active::after { transform: scaleX(1); }
+
+.tab-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-btn::after { transition: none; }
+}

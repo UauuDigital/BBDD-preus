@@ -2,12 +2,15 @@
   "name": "bbdd-preus",
   "private": true,
   "scripts": {
+    "build": "node scripts/build.js",
     "login": "clasp login",
     "pull": "clasp pull",
+    "prepush": "npm run build",
     "push": "clasp push",
-    "watch": "clasp push --watch",
-    "open": "clasp open-script",
-    "deploy": "clasp deploy"
+    "predeploy": "npm run build",
+    "deploy": "clasp deploy",
+    "watch": "npm run build && clasp push --watch",
+    "open": "clasp open-script"
   },
   "devDependencies": {
     "@google/clasp": "^2.4.2"

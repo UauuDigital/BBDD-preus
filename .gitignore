@@ -1,1 +1,5 @@
 node_modules/
+GLOBAL_CLAUDE.md
+
+# Generat per scripts/build.js a partir de Index.template.html + /css + /js + /components
+Index.html

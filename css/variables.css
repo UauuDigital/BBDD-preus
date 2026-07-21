@@ -1,0 +1,90 @@
+/* ---------------------------------------------------------
+   Tokens — alineats amb el brandbook UAUU (pressupostos/colors_and_type.css)
+   --------------------------------------------------------- */
+:root {
+  /* Blacks / neutrals */
+  --color-ink:      #1c1c1a;
+  --color-charcoal: #333333;
+  --color-body:     #515856;
+  --color-muted:    #7e8c8d;
+
+  /* Warm neutrals (accent) */
+  --color-sand:       #cdc4b1;
+  --color-sand-dark:  #a99c81;
+  --color-sand-light: #e8e2d8;
+  --color-sand-pale:  #f5f2ed;
+
+  /* Structure */
+  --color-divider:  #e7e4de;
+  --color-surface:  #faf9f6;
+  --color-white:    #ffffff;
+
+  /* State */
+  --color-danger:      #a5433a;
+  --color-danger-bg:   #f6e9e7;
+  --color-success:     #4f6f52;
+  --color-success-bg:  #ecf1ea;
+
+  /* Semantic */
+  --fg-primary:   var(--color-ink);
+  --fg-secondary: var(--color-body);
+  --fg-tertiary:  var(--color-muted);
+  --fg-inverse:   var(--color-white);
+
+  --bg-page:    var(--color-white);
+  --bg-surface: var(--color-surface);
+  --bg-warm:    var(--color-sand-pale);
+
+  --border-default: var(--color-divider);
+  --focus-ring:      var(--color-charcoal);
+
+  --action-primary-bg:       var(--color-charcoal);
+  --action-primary-hover-bg: #474747;
+  --action-primary-fg:       var(--color-white);
+
+  /* Type */
+  --font-display: 'Cormorant Garamond', 'Georgia', serif;
+  --font-ui:      'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.875rem;
+  --text-md:   0.9375rem;
+  --text-lg:   1.0625rem;
+  --text-display: 1.625rem;
+
+  /* Space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(28, 28, 26, 0.06), 0 1px 1px rgba(28, 28, 26, 0.04);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration: 160ms;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
