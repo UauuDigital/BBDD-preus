@@ -101,8 +101,15 @@ function buildDesplegableSection(colIndex) {
   addBtn.type = 'button';
   addBtn.className = 'btn btn-primary';
   addBtn.textContent = 'Afegeix a la taula';
-  addBtn.addEventListener('click', function () {
-    if (!catInput.value.trim() || !castInput.value.trim() || !engInput.value.trim() || priceInput.value === '') return;
+
+  function isEntryValid() {
+    return Boolean(catInput.value.trim() && castInput.value.trim() && engInput.value.trim() && priceInput.value !== '');
+  }
+  function refreshAddBtn() { addBtn.disabled = !isEntryValid(); }
+  refreshAddBtn();
+
+  function addEntry() {
+    if (!isEntryValid()) return;
     items.push({
       CAT: catInput.value.trim(),
       CAST: castInput.value.trim(),
@@ -115,7 +122,22 @@ function buildDesplegableSection(colIndex) {
     castInput.value = '';
     engInput.value = '';
     priceInput.value = '';
+    refreshAddBtn();
     catInput.focus();
+  }
+
+  addBtn.addEventListener('click', addEntry);
+
+  // Evita que un Enter dins d'aquests camps enviï tot el formulari del
+  // modal (podria coincidir amb el pas final): en aquest mini-formulari
+  // Enter equival a "Afegeix a la taula".
+  [catInput, castInput, engInput, priceInput].forEach(function (input) {
+    input.addEventListener('input', refreshAddBtn);
+    input.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addEntry();
+    });
   });
 
   form.appendChild(catInput);

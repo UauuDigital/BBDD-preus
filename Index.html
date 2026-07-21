@@ -83,6 +83,12 @@
 
 * { box-sizing: border-box; }
 
+/* Sense això, classes com .btn (display: inline-flex) guanyarien a
+   l'estil per defecte del navegador per a [hidden] (mateixa especificitat,
+   però l'autor sempre guanya al full d'estils UA) i l'element es veuria
+   igualment encara que JS li posi hidden = true. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: var(--font-ui);
@@ -475,6 +481,21 @@ td.row-actions-col { padding: 0 var(--space-2); }
 }
 .modal-step:empty { display: none; }
 
+.modal-progress {
+  margin-top: var(--space-3);
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-divider);
+  overflow: hidden;
+}
+
+.modal-progress-fill {
+  height: 100%;
+  background: var(--color-charcoal);
+  border-radius: var(--radius-pill);
+  transition: width 220ms var(--ease-out);
+}
+
 .modal-fields {
   display: flex;
   flex-direction: column;
@@ -482,6 +503,17 @@ td.row-actions-col { padding: 0 var(--space-2); }
   padding: var(--space-5) var(--space-6);
   max-height: 60vh;
   overflow-y: auto;
+}
+
+.modal-fields.is-entering {
+  animation: modalFieldsIn 200ms var(--ease-out);
+}
+@keyframes modalFieldsIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-fields.is-entering { animation: none; }
 }
 
 .modal-field label {
@@ -492,8 +524,23 @@ td.row-actions-col { padding: 0 var(--space-2); }
   margin-bottom: var(--space-2);
 }
 
-.modal-field input,
-.modal-field select {
+.modal-field-required { color: var(--color-danger); }
+
+.modal-field-error {
+  display: none;
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+.modal-field.is-invalid .modal-field-error { display: block; }
+
+.modal-field.is-invalid input,
+.modal-field.is-invalid .multiselect-trigger {
+  border-color: var(--color-danger);
+}
+.modal-field.is-invalid .currency-suffix { color: var(--color-danger); }
+
+.modal-field input {
   width: 100%;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
@@ -503,10 +550,8 @@ td.row-actions-col { padding: 0 var(--space-2); }
   background: var(--bg-page);
 }
 
-.modal-field input:hover,
-.modal-field select:hover { border-color: var(--color-sand-dark); }
-.modal-field input:focus,
-.modal-field select:focus {
+.modal-field input:hover { border-color: var(--color-sand-dark); }
+.modal-field input:focus {
   outline: none;
   border-color: var(--focus-ring);
   box-shadow: inset 0 0 0 1px var(--focus-ring);
@@ -528,6 +573,10 @@ td.row-actions-col { padding: 0 var(--space-2); }
 }
 
 .multiselect-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   width: 100%;
   text-align: left;
   border: 1px solid var(--border-default);
@@ -538,6 +587,18 @@ td.row-actions-col { padding: 0 var(--space-2); }
   background: var(--bg-page);
   cursor: pointer;
 }
+.multiselect-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.multiselect-trigger-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--fg-tertiary);
+  transition: transform var(--duration) var(--ease-out);
+}
+.multiselect-trigger.is-open .multiselect-trigger-chevron { transform: rotate(180deg); }
 .multiselect-trigger:hover { border-color: var(--color-sand-dark); }
 .multiselect-trigger:focus-visible {
   outline: none;
@@ -549,13 +610,13 @@ td.row-actions-col { padding: 0 var(--space-2); }
   cursor: default;
   background: var(--bg-surface);
 }
+.multiselect-trigger:disabled .multiselect-trigger-chevron { display: none; }
 
+/* position:fixed (coordenades calculades en JS a l'obrir) en lloc
+   d'"absolute": si no, quedaria tallat pel scroll de .modal-fields. */
 .multiselect-panel {
-  position: absolute;
-  z-index: 2;
-  top: calc(100% + var(--space-1));
-  left: 0;
-  right: 0;
+  position: fixed;
+  z-index: 30;
   max-height: 200px;
   overflow-y: auto;
   background: var(--bg-page);
@@ -569,12 +630,43 @@ td.row-actions-col { padding: 0 var(--space-2); }
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   cursor: pointer;
 }
 .multiselect-option:hover { background: var(--bg-surface); }
+.multiselect-option.is-selected { background: var(--bg-warm); font-weight: 500; }
+.multiselect-option.is-selected:hover { background: var(--color-sand-light); }
+
+/* El checkbox real es manté per a teclat/lectors de pantalla, però
+   es clica el nom (tota la fila), no una casella visible. */
+.multiselect-option-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.multiselect-option-input:focus-visible ~ .multiselect-option-text {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.multiselect-option-text { flex: 1; }
+
+.multiselect-option-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--fg-primary);
+  visibility: hidden;
+}
+.multiselect-option.is-selected .multiselect-option-check { visibility: visible; }
 
 /* ---------------------------------------------------------
    Camp de moneda
@@ -608,7 +700,69 @@ td.row-actions-col { padding: 0 var(--space-2); }
   width: 18px;
   height: 18px;
   cursor: pointer;
+  accent-color: var(--color-charcoal);
 }
+
+/* ---------------------------------------------------------
+   Targetes clicables (pas "Opcions")
+   --------------------------------------------------------- */
+.option-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.option-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 84px;
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  color: var(--fg-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--duration) var(--ease-out), background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
+}
+.option-card:hover { border-color: var(--color-sand-dark); background: var(--bg-surface); }
+.option-card.is-selected {
+  border-color: var(--color-charcoal);
+  background: var(--bg-warm);
+  color: var(--fg-primary);
+}
+.option-card.is-selected:hover { background: var(--color-sand-light); }
+.option-card:has(.option-card-input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.option-card-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.option-card-text { padding-right: var(--space-2); }
+
+.option-card-check {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  color: var(--color-charcoal);
+  visibility: hidden;
+}
+.option-card.is-selected .option-card-check { visibility: visible; }
 
 /* ---------------------------------------------------------
    Pas de desglossament (Desplegable / Llindà / Altres Extres)
@@ -679,6 +833,19 @@ td.row-actions-col { padding: 0 var(--space-2); }
   font-size: var(--text-sm);
   width: 100%;
 }
+.desplegable-form input:hover { border-color: var(--color-sand-dark); }
+.desplegable-form input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+
+.desplegable-form .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--action-primary-bg);
+  border-color: var(--action-primary-bg);
+}
 
 @media (max-width: 640px) {
   .desplegable-form { grid-template-columns: 1fr 1fr; }
@@ -728,6 +895,9 @@ td.row-actions-col { padding: 0 var(--space-2); }
     <div class="modal-header">
       <h2 id="addRowTitle" class="modal-title">Nova fila</h2>
       <p id="addRowStep" class="modal-step"></p>
+      <div class="modal-progress" aria-hidden="true">
+        <div id="addRowProgressFill" class="modal-progress-fill"></div>
+      </div>
     </div>
     <div id="addRowFields" class="modal-fields"></div>
     <div class="modal-actions">
@@ -746,6 +916,8 @@ const ICONS = {
   plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2.5v11M2.5 8h11"/></svg>',
   refresh: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.62-3.9M13.5 2.3v3.3h-3.3"/></svg>',
   search: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M13.5 13.5 10.5 10.5"/></svg>',
+  chevron: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.25 8 10l4-3.75"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>',
 };
 // Nom de la columna d'identificador autogenerat (mateixa lògica que
 // isIdHeader_ a Código.js: es compara ignorant majúscules/minúscules).
@@ -970,24 +1142,51 @@ function getDistinctColumnValues(colIndex, splitCombined) {
   return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, 'ca'); });
 }
 
-function buildMultiselectField(colIndex, initialValue, fixedOptions) {
-  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
-  const initialSelection = String(initialValue || '')
-    .split(',')
-    .map(function (part) { return part.trim(); })
-    .filter(Boolean);
+// Component compartit per als desplegables d'uniselecció (buildSelectField,
+// buildYearField) i multiselecció (buildMultiselectField): mateix estil
+// visual, es clica el nom de l'opció (no una casella al costat). En
+// uniselecció, triar una opció desa el valor i tanca el panell; en
+// multiselecció es poden marcar diverses sense que es tanqui.
+function buildDropdownField(colIndex, initialValue, options, multi) {
+  const initialSelection = multi
+    ? String(initialValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean)
+    : (initialValue ? [String(initialValue)] : []);
 
   const wrap = document.createElement('div');
   wrap.className = 'multiselect';
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
+  trigger.id = 'addRowField' + colIndex;
   trigger.className = 'multiselect-trigger';
-  trigger.textContent = initialSelection.length
-    ? initialSelection.join(', ')
-    : (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar');
   trigger.disabled = !options.length;
+  trigger.setAttribute('aria-haspopup', 'true');
+  trigger.setAttribute('aria-expanded', 'false');
 
+  const triggerLabel = document.createElement('span');
+  triggerLabel.className = 'multiselect-trigger-label';
+  const triggerChevron = document.createElement('span');
+  triggerChevron.className = 'multiselect-trigger-chevron';
+  triggerChevron.innerHTML = ICONS.chevron;
+  trigger.appendChild(triggerLabel);
+  trigger.appendChild(triggerChevron);
+
+  // En multiselecció, amb 3+ seleccions es mostra un recompte
+  // ("3 seleccionades") en lloc de la llista sencera; el títol
+  // (tooltip) sempre té la llista completa.
+  function setTriggerLabel(list) {
+    triggerLabel.textContent = !list.length
+      ? (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar')
+      : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
+    trigger.title = list.join(', ');
+  }
+  setTriggerLabel(initialSelection);
+
+  // El panel fa servir position:fixed (calculat en JS a openPanel) en
+  // lloc de "absolute": si no, quedaria tallat pel scroll intern del
+  // modal (.modal-fields té overflow-y: auto). Es manté com a fill
+  // de "wrap" (dins el <dialog>) perquè "position: fixed" ja n'evita
+  // el clipping sense necessitat de treure'l del top layer del modal.
   const panel = document.createElement('div');
   panel.className = 'multiselect-panel';
   panel.hidden = true;
@@ -995,37 +1194,94 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions) {
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = initialSelection.join(', ');
+  hiddenInput.value = multi ? initialSelection.join(', ') : (initialSelection[0] || '');
+
+  const radioGroupName = 'dropdown-' + colIndex + '-' + Math.random().toString(36).slice(2);
 
   function updateSelection() {
-    const checked = Array.prototype.filter
-      .call(panel.querySelectorAll('input[type="checkbox"]'), function (cb) { return cb.checked; })
-      .map(function (cb) { return cb.value; });
-    hiddenInput.value = checked.join(', ');
-    trigger.textContent = checked.length ? checked.join(', ') : 'Selecciona...';
+    const checkedInputs = Array.prototype.filter
+      .call(panel.querySelectorAll('input'), function (input) { return input.checked; });
+    const values = checkedInputs.map(function (input) { return input.value; });
+    hiddenInput.value = multi ? values.join(', ') : (values[0] || '');
+    setTriggerLabel(values);
   }
 
   options.forEach(function (option) {
     const optionLabel = document.createElement('label');
     optionLabel.className = 'multiselect-option';
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.value = option;
-    checkbox.checked = initialSelection.indexOf(option) !== -1;
-    checkbox.addEventListener('change', updateSelection);
+    // L'input real es manté per a l'estat/accessibilitat però es veu
+    // ocult: es clica el nom (tota la fila), no una casella al costat.
+    const optionInput = document.createElement('input');
+    optionInput.type = multi ? 'checkbox' : 'radio';
+    if (!multi) optionInput.name = radioGroupName;
+    optionInput.className = 'multiselect-option-input';
+    optionInput.value = option;
+    optionInput.checked = initialSelection.indexOf(option) !== -1;
 
-    optionLabel.appendChild(checkbox);
-    optionLabel.appendChild(document.createTextNode(option));
+    const text = document.createElement('span');
+    text.className = 'multiselect-option-text';
+    text.textContent = option;
+
+    const check = document.createElement('span');
+    check.className = 'multiselect-option-check';
+    check.innerHTML = ICONS.check;
+
+    optionLabel.classList.toggle('is-selected', optionInput.checked);
+    optionInput.addEventListener('change', function () {
+      if (!multi) {
+        panel.querySelectorAll('.multiselect-option').forEach(function (el) { el.classList.remove('is-selected'); });
+      }
+      optionLabel.classList.toggle('is-selected', optionInput.checked);
+      updateSelection();
+      if (!multi) closePanel();
+    });
+
+    optionLabel.appendChild(optionInput);
+    optionLabel.appendChild(text);
+    optionLabel.appendChild(check);
     panel.appendChild(optionLabel);
   });
 
+  function repositionPanel() {
+    const rect = trigger.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 4) + 'px';
+    panel.style.left = rect.left + 'px';
+    panel.style.width = rect.width + 'px';
+  }
+
+  function openPanel() {
+    repositionPanel();
+    panel.hidden = false;
+    trigger.classList.add('is-open');
+    trigger.setAttribute('aria-expanded', 'true');
+    document.getElementById('addRowFields').addEventListener('scroll', closePanel, { passive: true });
+    window.addEventListener('resize', closePanel);
+  }
+
+  function closePanel() {
+    panel.hidden = true;
+    trigger.classList.remove('is-open');
+    trigger.setAttribute('aria-expanded', 'false');
+    document.getElementById('addRowFields').removeEventListener('scroll', closePanel);
+    window.removeEventListener('resize', closePanel);
+  }
+  panel._closeMultiselect = closePanel;
+
   trigger.addEventListener('click', function (event) {
     event.stopPropagation();
-    document.querySelectorAll('.multiselect-panel').forEach(function (openPanel) {
-      if (openPanel !== panel) openPanel.hidden = true;
+    document.querySelectorAll('.multiselect-panel').forEach(function (openPanelEl) {
+      if (openPanelEl !== panel && !openPanelEl.hidden && openPanelEl._closeMultiselect) openPanelEl._closeMultiselect();
     });
-    panel.hidden = !panel.hidden;
+    if (panel.hidden) openPanel(); else closePanel();
+  });
+
+  panel.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      closePanel();
+      trigger.focus();
+    }
   });
 
   wrap.appendChild(trigger);
@@ -1035,34 +1291,24 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions) {
 }
 
 document.addEventListener('click', function () {
-  document.querySelectorAll('.multiselect-panel').forEach(function (panel) { panel.hidden = true; });
+  document.querySelectorAll('.multiselect-panel').forEach(function (panel) {
+    if (!panel.hidden && panel._closeMultiselect) panel._closeMultiselect();
+  });
 });
+
+function buildMultiselectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
+  return buildDropdownField(colIndex, initialValue, options, true);
+}
 // Capçaleres d'un sol valor que s'editen amb un desplegable uniselecció,
 // amb les opcions calculades a partir dels valors ja existents a la
-// columna (una per cel·la, no combinats amb comes).
+// columna (una per cel·la, no combinats amb comes). Mateix component
+// visual que el multiselecció (vegeu buildDropdownField a multiselect.js).
 const SELECT_HEADERS = ['Unit'];
 
 function buildSelectField(colIndex, initialValue, fixedOptions) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, false);
-
-  const select = document.createElement('select');
-  select.id = 'addRowField' + colIndex;
-  select.dataset.colIndex = String(colIndex);
-
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar';
-  select.appendChild(placeholder);
-
-  options.forEach(function (option) {
-    const optionEl = document.createElement('option');
-    optionEl.value = option;
-    optionEl.textContent = option;
-    select.appendChild(optionEl);
-  });
-
-  if (initialValue) select.value = initialValue;
-  return select;
+  return buildDropdownField(colIndex, initialValue, options, false);
 }
 // Capçaleres booleanes: es mostren com a casella de verificació. El
 // valor desat a la cel·la és "TRUE"/"FALSE" (el mateix format que fa
@@ -1081,6 +1327,38 @@ function buildCheckboxField(colIndex, initialValue) {
 
   wrap.appendChild(checkbox);
   return wrap;
+}
+// Targeta clicable per a camps booleans (pas "Opcions"): mateixa
+// semàntica que un checkbox (es desa "TRUE"/"FALSE") però es clica la
+// targeta sencera en lloc de marcar una caseta petita.
+function buildCardToggleField(colIndex, label, initialValue) {
+  const card = document.createElement('label');
+  card.className = 'option-card';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.className = 'option-card-input';
+  input.id = 'addRowField' + colIndex;
+  input.dataset.colIndex = String(colIndex);
+  input.checked = initialValue === 'TRUE';
+
+  const text = document.createElement('span');
+  text.className = 'option-card-text';
+  text.textContent = label;
+
+  const check = document.createElement('span');
+  check.className = 'option-card-check';
+  check.innerHTML = ICONS.check;
+
+  card.classList.toggle('is-selected', input.checked);
+  input.addEventListener('change', function () {
+    card.classList.toggle('is-selected', input.checked);
+  });
+
+  card.appendChild(input);
+  card.appendChild(text);
+  card.appendChild(check);
+  return card;
 }
 // Capçaleres de moneda: es mostren com a camp numèric amb sufix "€".
 const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X'];
@@ -1106,7 +1384,8 @@ function buildCurrencyField(colIndex, initialValue) {
 }
 // Capçalera de la columna d'any: es mostra com a desplegable d'un sol
 // any dins un rang relatiu a l'any actual (es recalcula cada vegada,
-// mai és una llista fixa d'anys).
+// mai és una llista fixa d'anys). Mateix component visual que la resta
+// de desplegables (vegeu buildDropdownField a multiselect.js).
 const YEAR_HEADER = 'Any';
 const YEAR_RANGE_BEFORE = 1;
 const YEAR_RANGE_AFTER = 2;
@@ -1115,26 +1394,14 @@ function getYearOptions() {
   const currentYear = new Date().getFullYear();
   const years = [];
   for (let year = currentYear - YEAR_RANGE_BEFORE; year <= currentYear + YEAR_RANGE_AFTER; year++) {
-    years.push(year);
+    years.push(String(year));
   }
   return years;
 }
 
 function buildYearField(colIndex, initialValue) {
-  const select = document.createElement('select');
-  select.id = 'addRowField' + colIndex;
-  select.dataset.colIndex = String(colIndex);
-
-  const selectedYear = initialValue ? Number(initialValue) : new Date().getFullYear();
-  getYearOptions().forEach(function (year) {
-    const option = document.createElement('option');
-    option.value = String(year);
-    option.textContent = String(year);
-    if (year === selectedYear) option.selected = true;
-    select.appendChild(option);
-  });
-
-  return select;
+  const currentYear = String(new Date().getFullYear());
+  return buildDropdownField(colIndex, initialValue || currentYear, getYearOptions(), false);
 }
 // Secció "Llindà" del pas de desglossament: Principi/Final són numèrics,
 // els dos preus són de moneda (reutilitza buildCurrencyField).
@@ -1283,8 +1550,15 @@ function buildDesplegableSection(colIndex) {
   addBtn.type = 'button';
   addBtn.className = 'btn btn-primary';
   addBtn.textContent = 'Afegeix a la taula';
-  addBtn.addEventListener('click', function () {
-    if (!catInput.value.trim() || !castInput.value.trim() || !engInput.value.trim() || priceInput.value === '') return;
+
+  function isEntryValid() {
+    return Boolean(catInput.value.trim() && castInput.value.trim() && engInput.value.trim() && priceInput.value !== '');
+  }
+  function refreshAddBtn() { addBtn.disabled = !isEntryValid(); }
+  refreshAddBtn();
+
+  function addEntry() {
+    if (!isEntryValid()) return;
     items.push({
       CAT: catInput.value.trim(),
       CAST: castInput.value.trim(),
@@ -1297,7 +1571,22 @@ function buildDesplegableSection(colIndex) {
     castInput.value = '';
     engInput.value = '';
     priceInput.value = '';
+    refreshAddBtn();
     catInput.focus();
+  }
+
+  addBtn.addEventListener('click', addEntry);
+
+  // Evita que un Enter dins d'aquests camps enviï tot el formulari del
+  // modal (podria coincidir amb el pas final): en aquest mini-formulari
+  // Enter equival a "Afegeix a la taula".
+  [catInput, castInput, engInput, priceInput].forEach(function (input) {
+    input.addEventListener('input', refreshAddBtn);
+    input.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addEntry();
+    });
   });
 
   form.appendChild(catInput);
@@ -1534,6 +1823,22 @@ function isExtrasStepNeededLive() {
   return getSelectedAltresExtresLive().length > 0;
 }
 
+// Nombre de passos previstos amb la informació que es coneix fins ara
+// (les tries encara no fetes es donen per "no calen"): la barra de
+// progrés es recalcula cada pas i pot créixer a mesura que l'usuari
+// marca opcions que n'afegeixen més endavant.
+function getPlannedStepCount() {
+  let count = 2;
+  if (isDetailsStepNeededLive()) {
+    count++;
+    if (isBreakdownStepNeededLive()) {
+      count++;
+      if (isExtrasStepNeededLive()) count++;
+    }
+  }
+  return count;
+}
+
 function openAddRowModal() {
   modalStepIndex = STEP_GENERAL;
   modalValues = {};
@@ -1578,17 +1883,78 @@ function buildFieldControl(colIndex, label, isId) {
   return input;
 }
 
-function appendField(container, colIndex, label, control) {
+function getFieldControlValue(colIndex) {
+  const el = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+  return el ? String(el.value || '') : '';
+}
+
+function appendField(container, colIndex, label, control, options) {
+  options = options || {};
   const field = document.createElement('div');
   field.className = 'modal-field' + (isIdHeader(label) ? ' modal-field-readonly' : '');
+  // Atribut propi (diferent de "data-col-index"): si reutilitzéssim
+  // data-col-index aquí, les cerques puntuals com getFieldControlValue
+  // trobarien primer aquest <div> embolcall (buit) en lloc de l'input
+  // real, ja que apareix abans en l'ordre del document.
+  field.dataset.fieldIndex = String(colIndex);
 
   const fieldLabel = document.createElement('label');
   fieldLabel.textContent = label || 'Columna ' + (colIndex + 1);
   fieldLabel.setAttribute('for', 'addRowField' + colIndex);
+  if (options.required) {
+    const asterisk = document.createElement('span');
+    asterisk.className = 'modal-field-required';
+    asterisk.textContent = ' *';
+    asterisk.setAttribute('aria-hidden', 'true');
+    fieldLabel.appendChild(asterisk);
+  }
 
   field.appendChild(fieldLabel);
   field.appendChild(control);
+
+  if (options.required) {
+    const error = document.createElement('p');
+    error.className = 'modal-field-error';
+    error.textContent = 'Aquest camp és obligatori.';
+    field.appendChild(error);
+
+    field.addEventListener('input', function () {
+      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
+    });
+    field.addEventListener('change', function () {
+      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
+    });
+  }
+
   container.appendChild(field);
+}
+
+// Valida el pas "Informació general": tots els camps hi són obligatoris
+// (excepte un desplegable/multiselecció desactivat perquè encara no hi
+// ha cap valor entre els quals triar). Marca visualment els buits i
+// retorna si es pot avançar.
+function validateStepGeneral() {
+  const fieldsWrap = document.getElementById('addRowFields');
+  let allValid = true;
+  let firstInvalidField = null;
+
+  getStepColIndexes(FIELD_STEPS[STEP_GENERAL]).forEach(function (colIndex) {
+    const fieldEl = fieldsWrap.querySelector('.modal-field[data-field-index="' + colIndex + '"]');
+    if (!fieldEl) return;
+    const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
+    const isEmpty = !disabledControl && getFieldControlValue(colIndex).trim() === '';
+    fieldEl.classList.toggle('is-invalid', isEmpty);
+    if (isEmpty) {
+      allValid = false;
+      if (!firstInvalidField) firstInvalidField = fieldEl;
+    }
+  });
+
+  if (firstInvalidField) {
+    const focusable = firstInvalidField.querySelector('input:not([type="hidden"]), .multiselect-trigger');
+    if (focusable) focusable.focus();
+  }
+  return allValid;
 }
 
 function buildAltresExtresSection() {
@@ -1663,24 +2029,38 @@ function renderModalStep() {
         });
       }
     });
+  } else if (modalStepIndex === STEP_OPTIONS) {
+    const grid = document.createElement('div');
+    grid.className = 'option-card-grid';
+    getStepColIndexes(FIELD_STEPS[STEP_OPTIONS]).forEach(function (colIndex) {
+      const label = state.headers[colIndex];
+      const card = buildCardToggleField(colIndex, label, modalValues[colIndex]);
+      grid.appendChild(card);
+    });
+    fieldsWrap.appendChild(grid);
+
+    ['quantityBased', 'Extres'].forEach(function (header) {
+      const colIndex = state.headers.indexOf(header);
+      if (colIndex === -1) return;
+      const checkbox = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+      if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
+    });
   } else {
     getStepColIndexes(FIELD_STEPS[modalStepIndex]).forEach(function (colIndex) {
       const label = state.headers[colIndex];
-      appendField(fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)));
+      appendField(
+        fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)),
+        { required: modalStepIndex === STEP_GENERAL }
+      );
     });
-
-    if (modalStepIndex === STEP_OPTIONS) {
-      ['quantityBased', 'Extres'].forEach(function (header) {
-        const colIndex = state.headers.indexOf(header);
-        if (colIndex === -1) return;
-        const checkbox = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
-        if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
-      });
-    }
   }
 
   updateModalNavButtons();
-  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"]), select');
+  fieldsWrap.classList.remove('is-entering');
+  void fieldsWrap.offsetWidth; // força el reflow perquè l'animació es reiniciï cada pas
+  fieldsWrap.classList.add('is-entering');
+
+  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"]), .multiselect-trigger:not(:disabled)');
   if (firstInput) firstInput.focus();
 }
 
@@ -1692,16 +2072,24 @@ function isLastStep() {
   return true;
 }
 
+function updateProgressBar() {
+  const plannedSteps = Math.max(getPlannedStepCount(), modalStepIndex + 1);
+  document.getElementById('addRowProgressFill').style.width =
+    Math.round(((modalStepIndex + 1) / plannedSteps) * 100) + '%';
+}
+
 function updateModalNavButtons() {
   const isFirst = modalStepIndex === STEP_GENERAL;
   const isLast = isLastStep();
   document.getElementById('addRowBackBtn').hidden = isFirst;
   document.getElementById('addRowNextBtn').hidden = isLast;
   document.getElementById('addRowSubmitBtn').hidden = !isLast;
+  updateProgressBar();
 }
 
 function handleModalNext() {
   captureStepValues();
+  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return;
   if (isLastStep()) return;
   modalStepIndex++;
   renderModalStep();

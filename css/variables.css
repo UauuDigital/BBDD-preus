@@ -74,6 +74,12 @@
 
 * { box-sizing: border-box; }
 
+/* Sense això, classes com .btn (display: inline-flex) guanyarien a
+   l'estil per defecte del navegador per a [hidden] (mateixa especificitat,
+   però l'autor sempre guanya al full d'estils UA) i l'element es veuria
+   igualment encara que JS li posi hidden = true. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: var(--font-ui);

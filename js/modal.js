@@ -78,6 +78,22 @@ function isExtrasStepNeededLive() {
   return getSelectedAltresExtresLive().length > 0;
 }
 
+// Nombre de passos previstos amb la informació que es coneix fins ara
+// (les tries encara no fetes es donen per "no calen"): la barra de
+// progrés es recalcula cada pas i pot créixer a mesura que l'usuari
+// marca opcions que n'afegeixen més endavant.
+function getPlannedStepCount() {
+  let count = 2;
+  if (isDetailsStepNeededLive()) {
+    count++;
+    if (isBreakdownStepNeededLive()) {
+      count++;
+      if (isExtrasStepNeededLive()) count++;
+    }
+  }
+  return count;
+}
+
 function openAddRowModal() {
   modalStepIndex = STEP_GENERAL;
   modalValues = {};
@@ -122,17 +138,78 @@ function buildFieldControl(colIndex, label, isId) {
   return input;
 }
 
-function appendField(container, colIndex, label, control) {
+function getFieldControlValue(colIndex) {
+  const el = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+  return el ? String(el.value || '') : '';
+}
+
+function appendField(container, colIndex, label, control, options) {
+  options = options || {};
   const field = document.createElement('div');
   field.className = 'modal-field' + (isIdHeader(label) ? ' modal-field-readonly' : '');
+  // Atribut propi (diferent de "data-col-index"): si reutilitzéssim
+  // data-col-index aquí, les cerques puntuals com getFieldControlValue
+  // trobarien primer aquest <div> embolcall (buit) en lloc de l'input
+  // real, ja que apareix abans en l'ordre del document.
+  field.dataset.fieldIndex = String(colIndex);
 
   const fieldLabel = document.createElement('label');
   fieldLabel.textContent = label || 'Columna ' + (colIndex + 1);
   fieldLabel.setAttribute('for', 'addRowField' + colIndex);
+  if (options.required) {
+    const asterisk = document.createElement('span');
+    asterisk.className = 'modal-field-required';
+    asterisk.textContent = ' *';
+    asterisk.setAttribute('aria-hidden', 'true');
+    fieldLabel.appendChild(asterisk);
+  }
 
   field.appendChild(fieldLabel);
   field.appendChild(control);
+
+  if (options.required) {
+    const error = document.createElement('p');
+    error.className = 'modal-field-error';
+    error.textContent = 'Aquest camp és obligatori.';
+    field.appendChild(error);
+
+    field.addEventListener('input', function () {
+      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
+    });
+    field.addEventListener('change', function () {
+      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
+    });
+  }
+
   container.appendChild(field);
+}
+
+// Valida el pas "Informació general": tots els camps hi són obligatoris
+// (excepte un desplegable/multiselecció desactivat perquè encara no hi
+// ha cap valor entre els quals triar). Marca visualment els buits i
+// retorna si es pot avançar.
+function validateStepGeneral() {
+  const fieldsWrap = document.getElementById('addRowFields');
+  let allValid = true;
+  let firstInvalidField = null;
+
+  getStepColIndexes(FIELD_STEPS[STEP_GENERAL]).forEach(function (colIndex) {
+    const fieldEl = fieldsWrap.querySelector('.modal-field[data-field-index="' + colIndex + '"]');
+    if (!fieldEl) return;
+    const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
+    const isEmpty = !disabledControl && getFieldControlValue(colIndex).trim() === '';
+    fieldEl.classList.toggle('is-invalid', isEmpty);
+    if (isEmpty) {
+      allValid = false;
+      if (!firstInvalidField) firstInvalidField = fieldEl;
+    }
+  });
+
+  if (firstInvalidField) {
+    const focusable = firstInvalidField.querySelector('input:not([type="hidden"]), .multiselect-trigger');
+    if (focusable) focusable.focus();
+  }
+  return allValid;
 }
 
 function buildAltresExtresSection() {
@@ -207,24 +284,38 @@ function renderModalStep() {
         });
       }
     });
+  } else if (modalStepIndex === STEP_OPTIONS) {
+    const grid = document.createElement('div');
+    grid.className = 'option-card-grid';
+    getStepColIndexes(FIELD_STEPS[STEP_OPTIONS]).forEach(function (colIndex) {
+      const label = state.headers[colIndex];
+      const card = buildCardToggleField(colIndex, label, modalValues[colIndex]);
+      grid.appendChild(card);
+    });
+    fieldsWrap.appendChild(grid);
+
+    ['quantityBased', 'Extres'].forEach(function (header) {
+      const colIndex = state.headers.indexOf(header);
+      if (colIndex === -1) return;
+      const checkbox = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
+      if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
+    });
   } else {
     getStepColIndexes(FIELD_STEPS[modalStepIndex]).forEach(function (colIndex) {
       const label = state.headers[colIndex];
-      appendField(fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)));
+      appendField(
+        fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)),
+        { required: modalStepIndex === STEP_GENERAL }
+      );
     });
-
-    if (modalStepIndex === STEP_OPTIONS) {
-      ['quantityBased', 'Extres'].forEach(function (header) {
-        const colIndex = state.headers.indexOf(header);
-        if (colIndex === -1) return;
-        const checkbox = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
-        if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
-      });
-    }
   }
 
   updateModalNavButtons();
-  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"]), select');
+  fieldsWrap.classList.remove('is-entering');
+  void fieldsWrap.offsetWidth; // força el reflow perquè l'animació es reiniciï cada pas
+  fieldsWrap.classList.add('is-entering');
+
+  const firstInput = fieldsWrap.querySelector('input:not([readonly]):not([type="hidden"]), .multiselect-trigger:not(:disabled)');
   if (firstInput) firstInput.focus();
 }
 
@@ -236,16 +327,24 @@ function isLastStep() {
   return true;
 }
 
+function updateProgressBar() {
+  const plannedSteps = Math.max(getPlannedStepCount(), modalStepIndex + 1);
+  document.getElementById('addRowProgressFill').style.width =
+    Math.round(((modalStepIndex + 1) / plannedSteps) * 100) + '%';
+}
+
 function updateModalNavButtons() {
   const isFirst = modalStepIndex === STEP_GENERAL;
   const isLast = isLastStep();
   document.getElementById('addRowBackBtn').hidden = isFirst;
   document.getElementById('addRowNextBtn').hidden = isLast;
   document.getElementById('addRowSubmitBtn').hidden = !isLast;
+  updateProgressBar();
 }
 
 function handleModalNext() {
   captureStepValues();
+  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return;
   if (isLastStep()) return;
   modalStepIndex++;
   renderModalStep();

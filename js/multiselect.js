@@ -19,24 +19,51 @@ function getDistinctColumnValues(colIndex, splitCombined) {
   return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, 'ca'); });
 }
 
-function buildMultiselectField(colIndex, initialValue, fixedOptions) {
-  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
-  const initialSelection = String(initialValue || '')
-    .split(',')
-    .map(function (part) { return part.trim(); })
-    .filter(Boolean);
+// Component compartit per als desplegables d'uniselecció (buildSelectField,
+// buildYearField) i multiselecció (buildMultiselectField): mateix estil
+// visual, es clica el nom de l'opció (no una casella al costat). En
+// uniselecció, triar una opció desa el valor i tanca el panell; en
+// multiselecció es poden marcar diverses sense que es tanqui.
+function buildDropdownField(colIndex, initialValue, options, multi) {
+  const initialSelection = multi
+    ? String(initialValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean)
+    : (initialValue ? [String(initialValue)] : []);
 
   const wrap = document.createElement('div');
   wrap.className = 'multiselect';
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
+  trigger.id = 'addRowField' + colIndex;
   trigger.className = 'multiselect-trigger';
-  trigger.textContent = initialSelection.length
-    ? initialSelection.join(', ')
-    : (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar');
   trigger.disabled = !options.length;
+  trigger.setAttribute('aria-haspopup', 'true');
+  trigger.setAttribute('aria-expanded', 'false');
 
+  const triggerLabel = document.createElement('span');
+  triggerLabel.className = 'multiselect-trigger-label';
+  const triggerChevron = document.createElement('span');
+  triggerChevron.className = 'multiselect-trigger-chevron';
+  triggerChevron.innerHTML = ICONS.chevron;
+  trigger.appendChild(triggerLabel);
+  trigger.appendChild(triggerChevron);
+
+  // En multiselecció, amb 3+ seleccions es mostra un recompte
+  // ("3 seleccionades") en lloc de la llista sencera; el títol
+  // (tooltip) sempre té la llista completa.
+  function setTriggerLabel(list) {
+    triggerLabel.textContent = !list.length
+      ? (options.length ? 'Selecciona...' : 'Encara no hi ha valors per triar')
+      : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
+    trigger.title = list.join(', ');
+  }
+  setTriggerLabel(initialSelection);
+
+  // El panel fa servir position:fixed (calculat en JS a openPanel) en
+  // lloc de "absolute": si no, quedaria tallat pel scroll intern del
+  // modal (.modal-fields té overflow-y: auto). Es manté com a fill
+  // de "wrap" (dins el <dialog>) perquè "position: fixed" ja n'evita
+  // el clipping sense necessitat de treure'l del top layer del modal.
   const panel = document.createElement('div');
   panel.className = 'multiselect-panel';
   panel.hidden = true;
@@ -44,37 +71,94 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions) {
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = initialSelection.join(', ');
+  hiddenInput.value = multi ? initialSelection.join(', ') : (initialSelection[0] || '');
+
+  const radioGroupName = 'dropdown-' + colIndex + '-' + Math.random().toString(36).slice(2);
 
   function updateSelection() {
-    const checked = Array.prototype.filter
-      .call(panel.querySelectorAll('input[type="checkbox"]'), function (cb) { return cb.checked; })
-      .map(function (cb) { return cb.value; });
-    hiddenInput.value = checked.join(', ');
-    trigger.textContent = checked.length ? checked.join(', ') : 'Selecciona...';
+    const checkedInputs = Array.prototype.filter
+      .call(panel.querySelectorAll('input'), function (input) { return input.checked; });
+    const values = checkedInputs.map(function (input) { return input.value; });
+    hiddenInput.value = multi ? values.join(', ') : (values[0] || '');
+    setTriggerLabel(values);
   }
 
   options.forEach(function (option) {
     const optionLabel = document.createElement('label');
     optionLabel.className = 'multiselect-option';
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.value = option;
-    checkbox.checked = initialSelection.indexOf(option) !== -1;
-    checkbox.addEventListener('change', updateSelection);
+    // L'input real es manté per a l'estat/accessibilitat però es veu
+    // ocult: es clica el nom (tota la fila), no una casella al costat.
+    const optionInput = document.createElement('input');
+    optionInput.type = multi ? 'checkbox' : 'radio';
+    if (!multi) optionInput.name = radioGroupName;
+    optionInput.className = 'multiselect-option-input';
+    optionInput.value = option;
+    optionInput.checked = initialSelection.indexOf(option) !== -1;
 
-    optionLabel.appendChild(checkbox);
-    optionLabel.appendChild(document.createTextNode(option));
+    const text = document.createElement('span');
+    text.className = 'multiselect-option-text';
+    text.textContent = option;
+
+    const check = document.createElement('span');
+    check.className = 'multiselect-option-check';
+    check.innerHTML = ICONS.check;
+
+    optionLabel.classList.toggle('is-selected', optionInput.checked);
+    optionInput.addEventListener('change', function () {
+      if (!multi) {
+        panel.querySelectorAll('.multiselect-option').forEach(function (el) { el.classList.remove('is-selected'); });
+      }
+      optionLabel.classList.toggle('is-selected', optionInput.checked);
+      updateSelection();
+      if (!multi) closePanel();
+    });
+
+    optionLabel.appendChild(optionInput);
+    optionLabel.appendChild(text);
+    optionLabel.appendChild(check);
     panel.appendChild(optionLabel);
   });
 
+  function repositionPanel() {
+    const rect = trigger.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 4) + 'px';
+    panel.style.left = rect.left + 'px';
+    panel.style.width = rect.width + 'px';
+  }
+
+  function openPanel() {
+    repositionPanel();
+    panel.hidden = false;
+    trigger.classList.add('is-open');
+    trigger.setAttribute('aria-expanded', 'true');
+    document.getElementById('addRowFields').addEventListener('scroll', closePanel, { passive: true });
+    window.addEventListener('resize', closePanel);
+  }
+
+  function closePanel() {
+    panel.hidden = true;
+    trigger.classList.remove('is-open');
+    trigger.setAttribute('aria-expanded', 'false');
+    document.getElementById('addRowFields').removeEventListener('scroll', closePanel);
+    window.removeEventListener('resize', closePanel);
+  }
+  panel._closeMultiselect = closePanel;
+
   trigger.addEventListener('click', function (event) {
     event.stopPropagation();
-    document.querySelectorAll('.multiselect-panel').forEach(function (openPanel) {
-      if (openPanel !== panel) openPanel.hidden = true;
+    document.querySelectorAll('.multiselect-panel').forEach(function (openPanelEl) {
+      if (openPanelEl !== panel && !openPanelEl.hidden && openPanelEl._closeMultiselect) openPanelEl._closeMultiselect();
     });
-    panel.hidden = !panel.hidden;
+    if (panel.hidden) openPanel(); else closePanel();
+  });
+
+  panel.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      closePanel();
+      trigger.focus();
+    }
   });
 
   wrap.appendChild(trigger);
@@ -84,5 +168,12 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions) {
 }
 
 document.addEventListener('click', function () {
-  document.querySelectorAll('.multiselect-panel').forEach(function (panel) { panel.hidden = true; });
+  document.querySelectorAll('.multiselect-panel').forEach(function (panel) {
+    if (!panel.hidden && panel._closeMultiselect) panel._closeMultiselect();
+  });
 });
+
+function buildMultiselectField(colIndex, initialValue, fixedOptions) {
+  const options = fixedOptions || getDistinctColumnValues(colIndex, true);
+  return buildDropdownField(colIndex, initialValue, options, true);
+}
