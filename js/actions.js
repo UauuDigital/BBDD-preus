@@ -32,6 +32,24 @@ function handleAddRow() {
   openAddRowModal();
 }
 
+// Duplica una fila: es reenvia com a fila nova a appendRow, buidant Id
+// (perquè el backend en generi un de nou) i DATA (perquè es recalculi
+// sola a partir de Dia/Mes/Excepte, si el full en té).
+function handleDuplicateRow(rowIndex) {
+  const source = state.rows[rowIndex];
+  const idColIndex = state.headers.findIndex(isIdHeader);
+  const dataColIndex = state.headers.findIndex(isDataHeader);
+  const values = source.map(function (value, colIndex) {
+    if (colIndex === idColIndex || colIndex === dataColIndex) return '';
+    return value;
+  });
+  setStatus('Duplicant fila...', 'loading');
+  google.script.run
+    .withSuccessHandler(loadCurrentSheet)
+    .withFailureHandler(onError)
+    .appendRow(state.currentName, values);
+}
+
 function handleDeleteRow(rowIndex) {
   const label = state.rows[rowIndex][0] || ('fila ' + (rowIndex + 1));
   if (!confirm('Segur que vols esborrar "' + label + '"?')) return;

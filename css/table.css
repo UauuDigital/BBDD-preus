@@ -115,9 +115,10 @@ tr:hover .cell-input.dirty { background: var(--color-sand-light); }
 }
 .cell-input-readonly:focus { box-shadow: none; }
 
-.row-actions-col { width: 44px; min-width: 44px; }
+.row-actions-col { width: 76px; min-width: 76px; }
 td.row-actions-col, th.row-actions-col { text-align: center; }
-td.row-actions-col { padding: 0 var(--space-2); }
+td.row-actions-col { padding: 0 var(--space-2); white-space: nowrap; }
+td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 
 /* Amplades específiques per a la taula simplificada de "Preus per dia"
    (vegeu COLUMN_WIDTH_CLASSES a state.js): DATA és una descripció

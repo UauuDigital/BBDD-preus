@@ -123,6 +123,14 @@ function renderTable() {
 
     const tdActions = document.createElement('td');
     tdActions.className = 'row-actions-col';
+    const dup = document.createElement('button');
+    dup.type = 'button';
+    dup.className = 'icon-btn';
+    dup.title = 'Duplica fila';
+    dup.setAttribute('aria-label', 'Duplica la fila ' + (rowIndex + 1));
+    dup.innerHTML = ICONS.duplicate;
+    dup.addEventListener('click', function () { handleDuplicateRow(rowIndex); });
+    tdActions.appendChild(dup);
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'icon-btn';
