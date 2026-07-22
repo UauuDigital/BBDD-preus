@@ -83,18 +83,19 @@ function renderFilters() {
   }
 }
 
-// Casella "Simplifica": només a la taula de "Preus per dia". Quan està
-// activada (per defecte), la taula només mostra SIMPLIFY_TABLE_COLUMNS;
-// desactivada, totes les columnes.
+// Casella "Simplifica": només als fulls d'SIMPLIFY_TABLE_COLUMNS_BY_SHEET
+// (vegeu state.js). Quan està activada (per defecte), la taula només
+// mostra les columnes d'aquell full; desactivada, totes les columnes.
 function renderSimplifyToggle() {
   const wrap = document.getElementById('simplifyToggle');
-  wrap.hidden = !(state.currentName === CALENDAR_SHEET_NAME && state.view === 'table');
+  wrap.hidden = !(isSimplifiableSheet(state.currentName) && state.view === 'table');
 }
 
 function getVisibleColIndexes() {
-  const simplifying = state.currentName === CALENDAR_SHEET_NAME && state.view === 'table' && state.simplifyTable;
+  const simplifying = isSimplifiableSheet(state.currentName) && state.view === 'table' && state.simplifyTable;
+  const columns = getSimplifyColumns(state.currentName);
   return state.headers
     .map(function (label, colIndex) { return { label: label, colIndex: colIndex }; })
-    .filter(function (item) { return !simplifying || SIMPLIFY_TABLE_COLUMNS.indexOf(item.label) !== -1; })
+    .filter(function (item) { return !simplifying || columns.indexOf(item.label) !== -1; })
     .map(function (item) { return item.colIndex; });
 }

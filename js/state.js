@@ -30,9 +30,19 @@ const SERVICES_SHEET_NAME = 'Hoja 1';
 const CALENDAR_SHEET_NAME = 'PreusMenu';
 const BARRA_SHEET_NAME = 'BarraLliure';
 
-// Columnes que es veuen a la taula de "Preus per dia" quan la casella
-// "Simplifica" està activada (per defecte ho està).
-const SIMPLIFY_TABLE_COLUMNS = ['DATA', 'MÍN', 'PREU/P', 'Masia', 'Any'];
+// Columnes que es veuen a la taula de cada full quan la casella
+// "Simplifica" està activada (per defecte ho està). Els fulls que no
+// hi surten no tenen aquesta casella.
+const SIMPLIFY_TABLE_COLUMNS_BY_SHEET = {
+  'PreusMenu': ['DATA', 'MÍN', 'PREU/P', 'Masia', 'Any'],
+  'Hoja 1': ['Nom Servei', 'Masia', 'Any', 'Preu'],
+};
+function isSimplifiableSheet(sheetName) {
+  return Object.prototype.hasOwnProperty.call(SIMPLIFY_TABLE_COLUMNS_BY_SHEET, sheetName);
+}
+function getSimplifyColumns(sheetName) {
+  return SIMPLIFY_TABLE_COLUMNS_BY_SHEET[sheetName] || [];
+}
 
 // Classe CSS per amplada de columna (vegeu css/table.css): DATA
 // necessita més espai (és una descripció, no un valor curt), MÍN/PREU/P/
