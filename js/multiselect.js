@@ -1,7 +1,7 @@
 // Capçaleres que s'editen amb un desplegable de multiselecció en lloc
 // d'un camp de text lliure (els valors seleccionats es desen a la
 // cel·la separats per ", ").
-const MULTISELECT_HEADERS = ['Masia', 'ExtraExtresLlista', 'ExtresLlista', 'Dia', 'Mes'];
+const MULTISELECT_HEADERS = ['Masia', 'Masies', 'ExtraExtresLlista', 'ExtresLlista', 'Dia', 'Mes'];
 
 // splitCombined: true si una mateixa cel·la pot contenir diversos valors
 // separats per comes (cas de Masia/ExtraExtresLlista); false si cada

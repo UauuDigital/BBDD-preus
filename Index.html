@@ -785,6 +785,22 @@ td.row-actions-col { padding: 0 var(--space-2); }
 }
 
 /* ---------------------------------------------------------
+   Camp de dos números separats per coma (p.ex. "SiMin€"/"NoMin€")
+   --------------------------------------------------------- */
+.dual-number-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dual-number-input { flex: 1; min-width: 0; }
+
+.dual-number-sep {
+  color: var(--fg-tertiary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------
    Camp de casella de verificació
    --------------------------------------------------------- */
 .checkbox-field {
@@ -1310,6 +1326,7 @@ const SHEET_INFO = {
 // noms tècnics de "Serveis" i "Preus per dia".
 const SERVICES_SHEET_NAME = 'Hoja 1';
 const CALENDAR_SHEET_NAME = 'PreusMenu';
+const BARRA_SHEET_NAME = 'BarraLliure';
 
 // Columnes que es veuen a la taula de "Preus per dia" quan la casella
 // "Simplifica" està activada (per defecte ho està).
@@ -1666,7 +1683,7 @@ function hasAnyFilterSelected() {
 
 // Colors d'opció per filtre, quan n'hi ha (vegeu getMasiaColor a
 // calendar-colors.js i getYearRelativeColor a yearfield.js).
-const FILTER_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor };
+const FILTER_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
 function buildFilterField(def) {
   const colIndex = state.headers.indexOf(def.header);
@@ -1751,7 +1768,7 @@ function getVisibleColIndexes() {
 // Construcció del camp d'edició d'una cel·la de la taula (mateix
 // component que el formulari "+ Fila" per a les columnes que ja hi són
 // desplegable/casella/moneda) i el desat immediat en canviar-lo.
-const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor };
+const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
 // Construeix el mateix tipus de camp que el formulari de "+ Fila" per
 // editar una cel·la ja existent (desplegable, casella, moneda...) en
@@ -2418,7 +2435,7 @@ function renderCalendar() {
 // Capçaleres que s'editen amb un desplegable de multiselecció en lloc
 // d'un camp de text lliure (els valors seleccionats es desen a la
 // cel·la separats per ", ").
-const MULTISELECT_HEADERS = ['Masia', 'ExtraExtresLlista', 'ExtresLlista', 'Dia', 'Mes'];
+const MULTISELECT_HEADERS = ['Masia', 'Masies', 'ExtraExtresLlista', 'ExtresLlista', 'Dia', 'Mes'];
 
 // splitCombined: true si una mateixa cel·la pot contenir diversos valors
 // separats per comes (cas de Masia/ExtraExtresLlista); false si cada
@@ -2721,6 +2738,59 @@ function buildCurrencyField(colIndex, initialValue, idPrefix) {
 
   wrap.appendChild(input);
   wrap.appendChild(suffix);
+  return wrap;
+}
+// Capçaleres que guarden dos números separats per una coma en una
+// mateixa cel·la (p.ex. "SiMin€" / "NoMin€" a "Barra lliure"): es
+// mostren com dos <input type="number"> independents que es combinen
+// en un únic valor "a,b" a l'input ocult amb data-col-index.
+const DUAL_NUMBER_HEADERS = ['SiMin€', 'NoMin€'];
+
+function parseDualNumberValue(raw) {
+  const parts = String(raw || '').split(',').map(function (part) { return part.trim(); });
+  return { a: parts[0] || '', b: parts[1] || '' };
+}
+
+function buildDualNumberField(colIndex, initialValue, idPrefix) {
+  const wrap = document.createElement('div');
+  wrap.className = 'dual-number-field';
+
+  const parsed = parseDualNumberValue(initialValue);
+
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.id = (idPrefix || 'addRowField') + colIndex;
+  hidden.dataset.colIndex = String(colIndex);
+  hidden.value = initialValue || '';
+
+  function makeNumberInput(value, placeholder) {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.01';
+    input.placeholder = placeholder;
+    input.className = 'dual-number-input';
+    if (value) input.value = value;
+    return input;
+  }
+
+  const inputA = makeNumberInput(parsed.a, 'Núm. 1');
+  const inputB = makeNumberInput(parsed.b, 'Núm. 2');
+
+  function syncHidden() {
+    hidden.value = (inputA.value || '') + ',' + (inputB.value || '');
+    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  inputA.addEventListener('change', syncHidden);
+  inputB.addEventListener('change', syncHidden);
+
+  const sep = document.createElement('span');
+  sep.className = 'dual-number-sep';
+  sep.textContent = ',';
+
+  wrap.appendChild(inputA);
+  wrap.appendChild(sep);
+  wrap.appendChild(inputB);
+  wrap.appendChild(hidden);
   return wrap;
 }
 // Capçalera de la columna d'any: es mostra com a desplegable d'un sol
@@ -3183,12 +3253,23 @@ const CALENDAR_FIELD_STEPS = [
   { title: 'Preu', headers: ['PREU/P', 'MÍN', 'PreuComp'] },
 ];
 
+const BARRA_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masies', 'Any'], requiredHeaders: ['Masies', 'Any'] },
+  { title: 'Preu', headers: ['Preu', 'SiMin€', 'NoMin€'] },
+];
+
 function isCalendarSheet() {
   return state.currentName === CALENDAR_SHEET_NAME;
 }
 
+function isBarraSheet() {
+  return state.currentName === BARRA_SHEET_NAME;
+}
+
 function getFieldSteps() {
-  return isCalendarSheet() ? CALENDAR_FIELD_STEPS : SERVICE_FIELD_STEPS;
+  if (isCalendarSheet()) return CALENDAR_FIELD_STEPS;
+  if (isBarraSheet()) return BARRA_FIELD_STEPS;
+  return SERVICE_FIELD_STEPS;
 }
 
 // Pas 3 (condicional): cada camp només apareix si la casella de la
@@ -3286,12 +3367,13 @@ function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
   if (MULTISELECT_HEADERS.indexOf(label) !== -1) {
-    return buildMultiselectField(colIndex, initialValue, undefined, undefined, label === 'Masia' ? getMasiaColor : undefined);
+    return buildMultiselectField(colIndex, initialValue, undefined, undefined, (label === 'Masia' || label === 'Masies') ? getMasiaColor : undefined);
   }
   if (label === YEAR_HEADER) return buildYearField(colIndex, initialValue, undefined, getYearRelativeColor);
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
   if (CHECKBOX_HEADERS.indexOf(label) !== -1) return buildCheckboxField(colIndex, initialValue);
   if (CURRENCY_HEADERS.indexOf(label) !== -1) return buildCurrencyField(colIndex, initialValue);
+  if (DUAL_NUMBER_HEADERS.indexOf(label) !== -1) return buildDualNumberField(colIndex, initialValue);
 
   if (NUMBER_HEADERS.indexOf(label) !== -1) {
     const numberInput = document.createElement('input');
@@ -3490,7 +3572,7 @@ function renderModalStep() {
         });
       }
     });
-  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet()) {
+  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet() && !isBarraSheet()) {
     const grid = document.createElement('div');
     grid.className = 'option-card-grid';
     getStepColIndexes(getFieldSteps()[STEP_OPTIONS]).forEach(function (colIndex) {

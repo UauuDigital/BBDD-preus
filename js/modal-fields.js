@@ -9,12 +9,13 @@ function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
   if (MULTISELECT_HEADERS.indexOf(label) !== -1) {
-    return buildMultiselectField(colIndex, initialValue, undefined, undefined, label === 'Masia' ? getMasiaColor : undefined);
+    return buildMultiselectField(colIndex, initialValue, undefined, undefined, (label === 'Masia' || label === 'Masies') ? getMasiaColor : undefined);
   }
   if (label === YEAR_HEADER) return buildYearField(colIndex, initialValue, undefined, getYearRelativeColor);
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
   if (CHECKBOX_HEADERS.indexOf(label) !== -1) return buildCheckboxField(colIndex, initialValue);
   if (CURRENCY_HEADERS.indexOf(label) !== -1) return buildCurrencyField(colIndex, initialValue);
+  if (DUAL_NUMBER_HEADERS.indexOf(label) !== -1) return buildDualNumberField(colIndex, initialValue);
 
   if (NUMBER_HEADERS.indexOf(label) !== -1) {
     const numberInput = document.createElement('input');

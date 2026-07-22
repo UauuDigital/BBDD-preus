@@ -19,6 +19,22 @@
 }
 
 /* ---------------------------------------------------------
+   Camp de dos números separats per coma (p.ex. "SiMin€"/"NoMin€")
+   --------------------------------------------------------- */
+.dual-number-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dual-number-input { flex: 1; min-width: 0; }
+
+.dual-number-sep {
+  color: var(--fg-tertiary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------
    Camp de casella de verificació
    --------------------------------------------------------- */
 .checkbox-field {

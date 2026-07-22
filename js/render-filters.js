@@ -16,7 +16,7 @@ function hasAnyFilterSelected() {
 
 // Colors d'opció per filtre, quan n'hi ha (vegeu getMasiaColor a
 // calendar-colors.js i getYearRelativeColor a yearfield.js).
-const FILTER_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor };
+const FILTER_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
 function buildFilterField(def) {
   const colIndex = state.headers.indexOf(def.header);

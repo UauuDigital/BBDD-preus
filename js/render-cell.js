@@ -1,7 +1,7 @@
 // Construcció del camp d'edició d'una cel·la de la taula (mateix
 // component que el formulari "+ Fila" per a les columnes que ja hi són
 // desplegable/casella/moneda) i el desat immediat en canviar-lo.
-const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor };
+const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
 // Construeix el mateix tipus de camp que el formulari de "+ Fila" per
 // editar una cel·la ja existent (desplegable, casella, moneda...) en

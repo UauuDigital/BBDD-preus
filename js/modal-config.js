@@ -22,12 +22,23 @@ const CALENDAR_FIELD_STEPS = [
   { title: 'Preu', headers: ['PREU/P', 'MÍN', 'PreuComp'] },
 ];
 
+const BARRA_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masies', 'Any'], requiredHeaders: ['Masies', 'Any'] },
+  { title: 'Preu', headers: ['Preu', 'SiMin€', 'NoMin€'] },
+];
+
 function isCalendarSheet() {
   return state.currentName === CALENDAR_SHEET_NAME;
 }
 
+function isBarraSheet() {
+  return state.currentName === BARRA_SHEET_NAME;
+}
+
 function getFieldSteps() {
-  return isCalendarSheet() ? CALENDAR_FIELD_STEPS : SERVICE_FIELD_STEPS;
+  if (isCalendarSheet()) return CALENDAR_FIELD_STEPS;
+  if (isBarraSheet()) return BARRA_FIELD_STEPS;
+  return SERVICE_FIELD_STEPS;
 }
 
 // Pas 3 (condicional): cada camp només apareix si la casella de la

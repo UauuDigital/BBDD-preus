@@ -28,6 +28,7 @@ const SHEET_INFO = {
 // noms tècnics de "Serveis" i "Preus per dia".
 const SERVICES_SHEET_NAME = 'Hoja 1';
 const CALENDAR_SHEET_NAME = 'PreusMenu';
+const BARRA_SHEET_NAME = 'BarraLliure';
 
 // Columnes que es veuen a la taula de "Preus per dia" quan la casella
 // "Simplifica" està activada (per defecte ho està).
