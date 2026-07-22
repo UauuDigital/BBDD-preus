@@ -1,0 +1,99 @@
+/* ---------------------------------------------------------
+   Pas de desglossament (Desplegable / Llindà / Altres Extres / Switch)
+   --------------------------------------------------------- */
+.breakdown-section {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-default);
+}
+.breakdown-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.section-heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+.modal-fields-nested {
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.switch-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+}
+
+.switch-option-group {
+  margin-bottom: var(--space-4);
+  min-width: 0;
+}
+.switch-option-group:last-child { margin-bottom: 0; }
+
+.switch-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.switch-option-heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+.desplegable-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+}
+.desplegable-table td {
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--space-2);
+}
+.desplegable-table td:last-child { width: 32px; text-align: center; }
+
+.desplegable-empty {
+  color: var(--fg-tertiary);
+  text-align: center;
+  padding: var(--space-3) !important;
+}
+
+.desplegable-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 0.8fr auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.desplegable-form input {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+.desplegable-form input:hover { border-color: var(--color-sand-dark); }
+.desplegable-form input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+
+.desplegable-form .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--action-primary-bg);
+  border-color: var(--action-primary-bg);
+}
+
+@media (max-width: 640px) {
+  .desplegable-form { grid-template-columns: 1fr 1fr; }
+}

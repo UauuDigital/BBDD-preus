@@ -1,64 +1,7 @@
-function renderTabs() {
-  const nav = document.getElementById('tabs');
-  nav.innerHTML = '';
-  state.sheets.forEach(function (sheet) {
-    const info = SHEET_INFO[sheet.name];
-    const btn = document.createElement('button');
-    btn.className = 'tab-btn' + (sheet.name === state.currentName ? ' active' : '');
-    btn.type = 'button';
-    btn.textContent = info ? info.label : sheet.name;
-    btn.title = info ? sheet.name : '';
-    btn.setAttribute('aria-selected', sheet.name === state.currentName ? 'true' : 'false');
-    btn.addEventListener('click', function () {
-      if (sheet.name === state.currentName) return;
-      state.currentName = sheet.name;
-      state.filterQuery = '';
-      state.filterMasia = [];
-      state.filterAny = [];
-      document.getElementById('searchInput').value = '';
-      renderTabs();
-      renderSkeleton(state.headers.length || 3, 5);
-      loadCurrentSheet();
-    });
-    nav.appendChild(btn);
-  });
-
-  const hintEl = document.getElementById('sheetHint');
-  const currentInfo = SHEET_INFO[state.currentName];
-  hintEl.textContent = currentInfo ? currentInfo.hint : '';
-}
-
-// Filtres per Masia i Any: només al full "Serveis", i només per a les
-// columnes que hi existeixin. Es reconstrueixen cada cop que es carrega
-// el full (les opcions depenen de les dades actuals), conservant la
-// selecció ja feta.
-function renderTableFilters() {
-  const container = document.getElementById('tableFilters');
-  container.innerHTML = '';
-  container.hidden = state.currentName !== SERVICES_SHEET_NAME;
-  if (container.hidden) return;
-
-  [
-    { header: 'Masia', selected: state.filterMasia, apply: function (values) { state.filterMasia = values; } },
-    { header: 'Any', selected: state.filterAny, apply: function (values) { state.filterAny = values; } },
-  ].forEach(function (def) {
-    const colIndex = state.headers.indexOf(def.header);
-    if (colIndex === -1) return;
-
-    const field = buildDropdownField(
-      colIndex, def.selected.join(', '), getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header
-    );
-    field.classList.add('table-filter');
-    const hiddenInput = field.querySelector('input[type="hidden"]');
-    field.addEventListener('change', function () {
-      def.apply(hiddenInput.value ? hiddenInput.value.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : []);
-      renderTable();
-    });
-
-    container.appendChild(field);
-  });
-}
-
+// Esquelet de càrrega i la construcció de la taula de dades pròpiament
+// dita. La navegació (pestanyes, commutador de vista) viu a
+// render-nav.js, els filtres a render-filters.js i la construcció de
+// cada cel·la editable a render-cell.js.
 function renderSkeleton(cols, rows) {
   const table = document.getElementById('dataTable');
   table.innerHTML = '';
@@ -82,6 +25,8 @@ function renderTable() {
   const table = document.getElementById('dataTable');
   table.innerHTML = '';
 
+  const visibleColIndexes = getVisibleColIndexes();
+
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
 
@@ -89,11 +34,39 @@ function renderTable() {
   thActions.className = 'row-actions-col';
   headRow.appendChild(thActions);
 
-  state.headers.forEach(function (label) {
+  visibleColIndexes.forEach(function (colIndex) {
     const th = document.createElement('th');
-    const wrap = document.createElement('div');
+    const colClass = columnClassFor(state.headers[colIndex]);
+    if (colClass) th.classList.add(colClass);
+
+    const wrap = document.createElement('button');
+    wrap.type = 'button';
     wrap.className = 'header-cell';
-    wrap.textContent = label;
+    wrap.setAttribute('aria-label', 'Ordena per "' + state.headers[colIndex] + '"');
+
+    const label = document.createElement('span');
+    label.className = 'header-cell-label';
+    label.textContent = state.headers[colIndex];
+    wrap.appendChild(label);
+
+    if (state.sortColIndex === colIndex) {
+      const arrow = document.createElement('span');
+      arrow.className = 'header-cell-sort-icon';
+      arrow.innerHTML = ICONS.chevron;
+      if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
+      wrap.appendChild(arrow);
+    }
+
+    wrap.addEventListener('click', function () {
+      if (state.sortColIndex === colIndex) {
+        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortColIndex = colIndex;
+        state.sortDirection = 'asc';
+      }
+      renderTable();
+    });
+
     th.appendChild(wrap);
     headRow.appendChild(th);
   });
@@ -102,23 +75,34 @@ function renderTable() {
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
-  const query = normalizeText(state.filterQuery).trim();
   const masiaColIndex = state.headers.indexOf('Masia');
   const anyColIndex = state.headers.indexOf('Any');
+  const diaColIndex = state.headers.indexOf('Dia');
+  const mesColIndex = state.headers.indexOf('Mes');
   const visible = state.rows
     .map(function (row, rowIndex) { return { row: row, rowIndex: rowIndex }; })
     .filter(function (item) {
-      if (query && !item.row.some(function (cell) { return normalizeText(cell).indexOf(query) !== -1; })) return false;
       if (!rowMatchesValueFilter(item.row, masiaColIndex, state.filterMasia)) return false;
       if (!rowMatchesValueFilter(item.row, anyColIndex, state.filterAny)) return false;
+      // Dia/Mes buits al full = "s'aplica a tots els dies/mesos" (mateixa
+      // regla que fa servir el calendari): una cel·la buida no s'exclou
+      // encara que hi hagi un filtre actiu.
+      if (!rowMatchesValueFilter(item.row, diaColIndex, state.filterDia, { emptyMeansAll: true, normalize: normalizeDiaForFilter })) return false;
+      if (!rowMatchesValueFilter(item.row, mesColIndex, state.filterMes, { emptyMeansAll: true, normalize: normalizeText })) return false;
       return true;
     });
+
+  if (state.sortColIndex !== -1) {
+    const dir = state.sortDirection === 'desc' ? -1 : 1;
+    const sortColIndex = state.sortColIndex;
+    visible.sort(function (a, b) { return compareForSort(a.row[sortColIndex], b.row[sortColIndex]) * dir; });
+  }
 
   if (!state.rows.length) {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = state.headers.length + 1;
+    td.colSpan = visibleColIndexes.length + 1;
     td.textContent = 'Encara no hi ha cap fila. Clica "+ Fila" per afegir-ne la primera.';
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -126,10 +110,8 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = state.headers.length + 1;
-    td.textContent = state.filterQuery
-      ? 'Cap fila coincideix amb "' + state.filterQuery + '".'
-      : 'Cap fila coincideix amb els filtres seleccionats.';
+    td.colSpan = visibleColIndexes.length + 1;
+    td.textContent = 'Cap fila coincideix amb els filtres seleccionats.';
     tr.appendChild(td);
     tbody.appendChild(tr);
   }
@@ -151,21 +133,16 @@ function renderTable() {
     tdActions.appendChild(del);
     tr.appendChild(tdActions);
 
-    row.forEach(function (value, colIndex) {
+    visibleColIndexes.forEach(function (colIndex) {
+      const value = row[colIndex];
       const td = document.createElement('td');
-      const input = document.createElement('input');
-      input.className = 'cell-input';
-      input.value = value;
-      input.dataset.original = value;
-      input.setAttribute('aria-label', (state.headers[colIndex] || 'Columna ' + (colIndex + 1)) + ', fila ' + (rowIndex + 1));
-      if (isIdHeader(state.headers[colIndex])) {
-        input.readOnly = true;
-        input.classList.add('cell-input-readonly');
-      } else {
-        input.addEventListener('input', function () { input.classList.add('dirty'); });
-        input.addEventListener('change', function () { saveCell(input, rowIndex, colIndex); });
-      }
-      td.appendChild(input);
+      const colClass = columnClassFor(state.headers[colIndex]);
+      if (colClass) td.classList.add(colClass);
+      const control = buildTableCellControl(state.headers[colIndex], colIndex, rowIndex, value);
+      getLabelableElement(control).setAttribute(
+        'aria-label', (state.headers[colIndex] || 'Columna ' + (colIndex + 1)) + ', fila ' + (rowIndex + 1)
+      );
+      td.appendChild(control);
       tr.appendChild(td);
     });
 

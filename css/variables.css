@@ -6,13 +6,33 @@
   --color-ink:      #1c1c1a;
   --color-charcoal: #333333;
   --color-body:     #515856;
-  --color-muted:    #7e8c8d;
+  /* #7e8c8d donava ~3.5:1 sobre blanc, per sota del mínim AA (4.5:1)
+     per a text normal. #667077 hi arriba amb marge (~5:1). */
+  --color-muted:    #667077;
 
   /* Warm neutrals (accent) */
   --color-sand:       #cdc4b1;
   --color-sand-dark:  #a99c81;
   --color-sand-light: #e8e2d8;
   --color-sand-pale:  #f5f2ed;
+
+  /* Masies (calendari "Preus per dia") — colors fixos per masia,
+     centralitzats aquí perquè no quedin com a hexadecimals solts al JS. */
+  --masia-alzina:  #D0E7FF;
+  --masia-macia:   #E1F2D1;
+  --masia-tous:    #FFEAA7;
+  --masia-vivencs: #FFD2BC;
+  --masia-default: #9ca3af;
+
+  /* "Any" (Preus per dia): mateix codi de colors que les marques de les
+     abelles reines apicultores (estàndard "Will You Raise Good Bees"),
+     es repeteix cada 5 anys — no per relació amb l'any actual. */
+  --year-white:   #f4f1ea;
+  --year-yellow:  #e0b400;
+  --year-red:     #a5433a;
+  --year-green:   #4f6f52;
+  --year-blue:    #3d6f8a;
+  --year-neutral: var(--color-sand);
 
   /* Structure */
   --color-divider:  #e7e4de;

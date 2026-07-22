@@ -2,13 +2,11 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('addRowBtn').innerHTML = ICONS.plus + '<span>Fila</span>';
   document.getElementById('refreshBtn').innerHTML = ICONS.refresh;
 
-  document.getElementById('searchIcon').innerHTML = ICONS.search;
-
   document.getElementById('addRowBtn').addEventListener('click', handleAddRow);
   document.getElementById('refreshBtn').addEventListener('click', loadCurrentSheet);
-  document.getElementById('searchInput').addEventListener('input', function (e) {
-    state.filterQuery = e.target.value;
-    renderTable();
+  document.getElementById('simplifyCheckbox').addEventListener('change', function (e) {
+    state.simplifyTable = e.target.checked;
+    renderCurrentView();
   });
 
   document.getElementById('addRowForm').addEventListener('submit', submitAddRowForm);

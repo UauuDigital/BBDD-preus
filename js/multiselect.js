@@ -1,7 +1,7 @@
 // Capçaleres que s'editen amb un desplegable de multiselecció en lloc
 // d'un camp de text lliure (els valors seleccionats es desen a la
 // cel·la separats per ", ").
-const MULTISELECT_HEADERS = ['Masia', 'ExtraExtresLlista'];
+const MULTISELECT_HEADERS = ['Masia', 'ExtraExtresLlista', 'ExtresLlista', 'Dia', 'Mes'];
 
 // splitCombined: true si una mateixa cel·la pot contenir diversos valors
 // separats per comes (cas de Masia/ExtraExtresLlista); false si cada
@@ -24,7 +24,10 @@ function getDistinctColumnValues(colIndex, splitCombined) {
 // visual, es clica el nom de l'opció (no una casella al costat). En
 // uniselecció, triar una opció desa el valor i tanca el panell; en
 // multiselecció es poden marcar diverses sense que es tanqui.
-function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, placeholderText) {
+// getOptionColor(optionValue): opcional, retorna un color CSS per
+// pintar un punt al costat de l'opció (p.ex. getMasiaColor). S'aplica
+// només a les files del panell, no al text del botó.
+function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, placeholderText, getOptionColor) {
   const initialSelection = multi
     ? String(initialValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean)
     : (initialValue ? [String(initialValue)] : []);
@@ -40,11 +43,17 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
   trigger.setAttribute('aria-haspopup', 'true');
   trigger.setAttribute('aria-expanded', 'false');
 
+  // Punts de color del valor seleccionat, visibles amb el desplegable
+  // tancat (no només en obrir-lo): per poder veure d'un cop d'ull els
+  // colors de masia/any directament a la taula, sense haver de clicar.
+  const triggerDots = document.createElement('span');
+  triggerDots.className = 'multiselect-trigger-dots';
   const triggerLabel = document.createElement('span');
   triggerLabel.className = 'multiselect-trigger-label';
   const triggerChevron = document.createElement('span');
   triggerChevron.className = 'multiselect-trigger-chevron';
   triggerChevron.innerHTML = ICONS.chevron;
+  trigger.appendChild(triggerDots);
   trigger.appendChild(triggerLabel);
   trigger.appendChild(triggerChevron);
 
@@ -57,6 +66,16 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
       ? (options.length ? emptyLabel : 'Encara no hi ha valors per triar')
       : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
     trigger.title = list.join(', ');
+
+    triggerDots.innerHTML = '';
+    if (getOptionColor) {
+      list.slice(0, 5).forEach(function (value) {
+        const dot = document.createElement('span');
+        dot.className = 'multiselect-trigger-dot';
+        dot.style.background = getOptionColor(value);
+        triggerDots.appendChild(dot);
+      });
+    }
   }
   setTriggerLabel(initialSelection);
 
@@ -116,6 +135,12 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
     });
 
     optionLabel.appendChild(optionInput);
+    if (getOptionColor) {
+      const dot = document.createElement('span');
+      dot.className = 'multiselect-option-dot';
+      dot.style.background = getOptionColor(option);
+      optionLabel.appendChild(dot);
+    }
     optionLabel.appendChild(text);
     optionLabel.appendChild(check);
     panel.appendChild(optionLabel);
@@ -179,7 +204,7 @@ document.addEventListener('click', function () {
   });
 });
 
-function buildMultiselectField(colIndex, initialValue, fixedOptions) {
+function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, true);
-  return buildDropdownField(colIndex, initialValue, options, true);
+  return buildDropdownField(colIndex, initialValue, options, true, idPrefix, undefined, getOptionColor);
 }

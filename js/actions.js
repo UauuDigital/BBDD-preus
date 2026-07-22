@@ -24,31 +24,8 @@ function onSheetLoaded(data) {
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
-  renderTableFilters();
-  renderTable();
+  renderCurrentView();
   setStatus(state.rows.length + ' files carregades.', 'success');
-}
-
-function saveCell(input, rowIndex, colIndex) {
-  const value = input.value;
-  if (value === input.dataset.original) {
-    input.classList.remove('dirty');
-    return;
-  }
-  setStatus('Desant...', 'loading');
-  google.script.run
-    .withSuccessHandler(function () {
-      state.rows[rowIndex][colIndex] = value;
-      input.dataset.original = value;
-      input.classList.remove('dirty');
-      setStatus('Desat.', 'success');
-    })
-    .withFailureHandler(function (err) {
-      input.value = input.dataset.original;
-      input.classList.remove('dirty');
-      onError(err);
-    })
-    .updateCell(state.currentName, rowIndex, colIndex, value);
 }
 
 function handleAddRow() {

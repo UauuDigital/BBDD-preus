@@ -16,9 +16,27 @@ const SHEET_INFO = {
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
 };
 
-// Full on s'ofereixen els filtres per Masia i Any (vegeu renderTableFilters
-// a render.js): és el nom tècnic de la pestanya "Serveis".
+// Fulls on s'ofereixen filtres (vegeu renderFilters a render.js): els
+// noms tècnics de "Serveis" i "Preus per dia".
 const SERVICES_SHEET_NAME = 'Hoja 1';
+const CALENDAR_SHEET_NAME = 'PreusMenu';
+
+// Columnes que es veuen a la taula de "Preus per dia" quan la casella
+// "Simplifica" està activada (per defecte ho està).
+const SIMPLIFY_TABLE_COLUMNS = ['DATA', 'MÍN', 'PREU/P', 'Masia', 'Any'];
+
+// Classe CSS per amplada de columna (vegeu css/table.css): DATA
+// necessita més espai (és una descripció, no un valor curt), MÍN/PREU/P/
+// Any en necessiten menys.
+const COLUMN_WIDTH_CLASSES = {
+  'DATA': 'col-wide',
+  'MÍN': 'col-narrow',
+  'PREU/P': 'col-narrow',
+  'Any': 'col-narrow',
+};
+function columnClassFor(header) {
+  return COLUMN_WIDTH_CLASSES[header] || null;
+}
 
 const state = {
   sheets: [],
@@ -26,18 +44,39 @@ const state = {
   headers: [],
   rows: [],
   loaded: false,
-  filterQuery: '',
   filterMasia: [],
   filterAny: [],
+  filterDia: [],
+  filterMes: [],
+  simplifyTable: true,
+  sortColIndex: -1,
+  sortDirection: 'asc',
+  view: 'table',
+  // 'years' (3 targetes d'any) → 'months' (12 targetes d'aquell any) →
+  // 'month' (el calendari d'un mes concret, la vista de sempre).
+  calendarLevel: 'years',
+  calendarYear: null,
+  calendarRefDate: new Date(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
 // colIndex (la cel·la es divideix per comes, ja que una mateixa fila
-// pot aplicar a diverses masies/anys alhora). Sense selecció, o sense
-// columna, no filtra res.
-function rowMatchesValueFilter(row, colIndex, selectedValues) {
+// pot aplicar a diverses masies/anys/dies/mesos alhora). Sense
+// selecció, o sense columna, no filtra res.
+// options.emptyMeansAll: una cel·la buida es considera "aplica a tot"
+// (cas de Dia/Mes al full "Preus per dia": buit = tots els dies/mesos).
+// options.normalize: compara els valors normalitzats en lloc del text
+// literal (calen per a Dia, on "Dissabte"/"Dissabtes" han de coincidir).
+function rowMatchesValueFilter(row, colIndex, selectedValues, options) {
+  options = options || {};
   if (!selectedValues.length || colIndex === -1) return true;
-  const cellParts = String(row[colIndex] || '').split(',').map(function (part) { return part.trim(); });
+  const raw = String(row[colIndex] || '').trim();
+  if (!raw) return Boolean(options.emptyMeansAll);
+  const cellParts = raw.split(',').map(function (part) { return part.trim(); });
+  if (options.normalize) {
+    const normalizedSelected = selectedValues.map(options.normalize);
+    return cellParts.some(function (part) { return normalizedSelected.indexOf(options.normalize(part)) !== -1; });
+  }
   return selectedValues.some(function (value) { return cellParts.indexOf(value) !== -1; });
 }
 
@@ -47,6 +86,26 @@ function normalizeText(value) {
     .normalize('NFD')
     .replace(DIACRITICS_RE, '')
     .toLowerCase();
+}
+
+// Ordenació "com a l'Excel": si tots dos valors semblen un número
+// (fins i tot formatats com "790,00 €"), es comparen numèricament;
+// si no, com a text (ignorant accents/majúscules).
+function parseSortableNumber(raw) {
+  const str = String(raw == null ? '' : raw).trim();
+  if (!str) return null;
+  const cleaned = str.replace(/[^\d,.\-]/g, '');
+  if (!cleaned) return null;
+  const normalized = cleaned.indexOf(',') !== -1 ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned;
+  const num = Number(normalized);
+  return isNaN(num) ? null : num;
+}
+
+function compareForSort(a, b) {
+  const numA = parseSortableNumber(a);
+  const numB = parseSortableNumber(b);
+  if (numA !== null && numB !== null) return numA - numB;
+  return normalizeText(a).localeCompare(normalizeText(b), 'ca');
 }
 
 function padRow(row, width) {

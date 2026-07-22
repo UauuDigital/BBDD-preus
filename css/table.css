@@ -28,10 +28,40 @@ thead th {
 }
 
 .header-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
   padding: var(--space-3) var(--space-2);
+  border: none;
+  background: transparent;
+  font-family: inherit;
   font-weight: 600;
   font-size: var(--text-sm);
+  color: var(--fg-primary);
+  text-align: left;
+  cursor: pointer;
 }
+.header-cell:hover { background: var(--color-sand-pale); }
+.header-cell:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.header-cell-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-cell-sort-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--fg-tertiary);
+}
+.header-cell-sort-icon.is-asc { transform: rotate(180deg); }
 
 .icon-btn {
   display: inline-flex;
@@ -51,6 +81,13 @@ tr:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
 .icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+/* 26px és massa petit per a un dit (mínim recomanat 44px): només
+   s'agranda en dispositius sense precisió de ratolí, per no fer
+   créixer la UI de forma innecessària en desktop. */
+@media (pointer: coarse) {
+  .icon-btn { width: 44px; height: 44px; }
+}
 
 .cell-input {
   width: 100%;
@@ -81,6 +118,12 @@ tr:hover .cell-input.dirty { background: var(--color-sand-light); }
 .row-actions-col { width: 44px; min-width: 44px; }
 td.row-actions-col, th.row-actions-col { text-align: center; }
 td.row-actions-col { padding: 0 var(--space-2); }
+
+/* Amplades específiques per a la taula simplificada de "Preus per dia"
+   (vegeu COLUMN_WIDTH_CLASSES a state.js): DATA és una descripció
+   llarga, MÍN/PREU/P/Any són valors curts. */
+.col-wide { min-width: 320px; }
+.col-narrow { width: 90px; min-width: 90px; }
 
 /* ---------------------------------------------------------
    Empty & skeleton states

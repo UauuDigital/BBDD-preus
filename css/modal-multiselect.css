@@ -1,0 +1,124 @@
+/* ---------------------------------------------------------
+   Multiselecció / uniselecció (Masia, Any, Unit, Dia, Mes...)
+   --------------------------------------------------------- */
+.multiselect {
+  position: relative;
+}
+
+.multiselect-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+  cursor: pointer;
+}
+.multiselect-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.multiselect-trigger-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.multiselect-trigger-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 28, 26, 0.15);
+  flex-shrink: 0;
+}
+.multiselect-trigger-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--fg-tertiary);
+  transition: transform var(--duration) var(--ease-out);
+}
+.multiselect-trigger.is-open .multiselect-trigger-chevron { transform: rotate(180deg); }
+.multiselect-trigger:hover { border-color: var(--color-sand-dark); }
+.multiselect-trigger:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+.multiselect-trigger:disabled {
+  color: var(--fg-tertiary);
+  cursor: default;
+  background: var(--bg-surface);
+}
+.multiselect-trigger:disabled .multiselect-trigger-chevron { display: none; }
+
+/* position:fixed (coordenades calculades en JS a l'obrir) en lloc
+   d'"absolute": si no, quedaria tallat pel scroll de .modal-fields. */
+.multiselect-panel {
+  position: fixed;
+  z-index: 30;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-2);
+}
+
+.multiselect-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.multiselect-option:hover { background: var(--bg-surface); }
+.multiselect-option.is-selected { background: var(--bg-warm); font-weight: 500; }
+.multiselect-option.is-selected:hover { background: var(--color-sand-light); }
+
+.multiselect-option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 28, 26, 0.15);
+  flex-shrink: 0;
+}
+
+/* El checkbox real es manté per a teclat/lectors de pantalla, però
+   es clica el nom (tota la fila), no una casella visible. */
+.multiselect-option-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.multiselect-option-input:focus-visible ~ .multiselect-option-text {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.multiselect-option-text { flex: 1; }
+
+.multiselect-option-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--fg-primary);
+  visibility: hidden;
+}
+.multiselect-option.is-selected .multiselect-option-check { visibility: visible; }

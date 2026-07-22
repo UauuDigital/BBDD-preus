@@ -4,7 +4,7 @@
 // visual que el multiselecció (vegeu buildDropdownField a multiselect.js).
 const SELECT_HEADERS = ['Unit'];
 
-function buildSelectField(colIndex, initialValue, fixedOptions) {
+function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, false);
-  return buildDropdownField(colIndex, initialValue, options, false);
+  return buildDropdownField(colIndex, initialValue, options, false, idPrefix, undefined, getOptionColor);
 }
