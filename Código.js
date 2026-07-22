@@ -58,13 +58,81 @@ function isIdColumn_(sheet, colIndex) {
   return isIdHeader_(sheet.getRange(1, colIndex + 1).getValue());
 }
 
+// La columna "DATA" (full "Preus per dia") no és un valor introduït a
+// mà: sempre s'ha de poder deduir de Dia + Mes + Excepte amb el patró
+// "[Dia] de [Mes] (excepte [Excepte])" (Dia/Mes buits = "tots els
+// dies"/"tots els mesos"). Per això és de només lectura des de la
+// taula i es recalcula sola en crear o editar una fila.
+const DATA_HEADER = 'DATA';
+
+function isDataHeader_(header) {
+  return String(header).trim() === DATA_HEADER;
+}
+
+function joinWithI_(items) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  return items.slice(0, items.length - 1).join(', ') + ' i ' + items[items.length - 1];
+}
+
+function splitListCell_(raw) {
+  return String(raw || '').split(',').map(function (part) { return part.trim(); }).filter(function (part) { return part; });
+}
+
+function computeDataDescription_(diaRaw, mesRaw, excepteRaw) {
+  const diaItems = splitListCell_(diaRaw);
+  const mesItems = splitListCell_(mesRaw);
+  const excepte = String(excepteRaw || '').trim();
+
+  const diaPart = diaItems.length ? joinWithI_(diaItems) : 'Tots els dies';
+  const mesPart = mesItems.length ? joinWithI_(mesItems) : 'tots els mesos';
+
+  let text = diaPart + ' de ' + mesPart;
+  if (excepte) text += ' (excepte ' + excepte + ')';
+  return text;
+}
+
+// Índexs (a "headers") de les columnes que intervenen en la descripció
+// de "DATA". -1 si el full no en té alguna.
+function getDataFormulaColIndexes_(headers) {
+  return {
+    data: headers.indexOf(DATA_HEADER),
+    dia: headers.indexOf('Dia'),
+    mes: headers.indexOf('Mes'),
+    excepte: headers.indexOf('Excepte'),
+  };
+}
+
 function updateCell(sheetName, rowIndex, colIndex, value) {
   const sheet = getSheetOrThrow_(sheetName);
-  if (isIdColumn_(sheet, colIndex)) {
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  if (isIdHeader_(headers[colIndex])) {
     throw new Error('La columna d\'identificador es genera automàticament i no es pot editar.');
   }
-  sheet.getRange(rowIndex + 2, colIndex + 1).setValue(value);
-  return true;
+  if (isDataHeader_(headers[colIndex])) {
+    throw new Error('La columna "DATA" es genera automàticament a partir de Dia/Mes/Excepte i no es pot editar directament.');
+  }
+
+  const targetRow = rowIndex + 2;
+  sheet.getRange(targetRow, colIndex + 1).setValue(value);
+
+  // Si s'edita Dia, Mes o Excepte, "DATA" es recalcula perquè segueixi
+  // descrivint exactament la regla.
+  const cols = getDataFormulaColIndexes_(headers);
+  const editedHeader = headers[colIndex];
+  if (cols.data !== -1 && (editedHeader === 'Dia' || editedHeader === 'Mes' || editedHeader === 'Excepte')) {
+    const rowValues = sheet.getRange(targetRow, 1, 1, lastCol).getDisplayValues()[0];
+    const dataText = computeDataDescription_(
+      cols.dia !== -1 ? rowValues[cols.dia] : '',
+      cols.mes !== -1 ? rowValues[cols.mes] : '',
+      cols.excepte !== -1 ? rowValues[cols.excepte] : ''
+    );
+    sheet.getRange(targetRow, cols.data + 1).setValue(dataText);
+    return { dataColIndex: cols.data, dataText: dataText };
+  }
+  return {};
 }
 
 function appendRow(sheetName, values) {
@@ -76,6 +144,18 @@ function appendRow(sheetName, values) {
       if (!isIdHeader_(headers[colIndex])) return value;
       return value || Utilities.getUuid();
     });
+
+    // "DATA" es genera sempre a partir de Dia/Mes/Excepte, encara que
+    // el formulari no l'ofereixi com a camp editable.
+    const cols = getDataFormulaColIndexes_(headers);
+    if (cols.data !== -1) {
+      finalValues[cols.data] = computeDataDescription_(
+        cols.dia !== -1 ? finalValues[cols.dia] : '',
+        cols.mes !== -1 ? finalValues[cols.mes] : '',
+        cols.excepte !== -1 ? finalValues[cols.excepte] : ''
+      );
+    }
+
     sheet.getRange(newRow, 1, 1, finalValues.length).setValues([finalValues]);
   }
   return true;

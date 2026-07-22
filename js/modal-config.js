@@ -5,11 +5,30 @@
 const SERVICE_NAME_HEADERS = ['Nom Servei', 'NomCAST', 'NomENG'];
 
 // Pantalles fixes del formulari de nova fila (només mostren les
-// columnes de la seva llista que existeixin al full actual).
-const FIELD_STEPS = [
+// columnes de la seva llista que existeixin al full actual). Cada full
+// té el seu propi recorregut: "Serveis" fa servir el flux amb opcions/
+// extres condicionals, "Preus per dia" (calendari) és més senzill i no
+// té cap pas condicional.
+const SERVICE_FIELD_STEPS = [
   { title: 'Informació general', headers: ['Nom Servei', 'NomCAST', 'NomENG', 'Masia', 'Any', 'Preu'] },
   { title: 'Opcions', headers: ['perConvidat', 'Optional', 'quantityBased', 'Extres'] },
 ];
+
+// requiredHeaders: només aquestes són obligatòries al pas 1 (Dia/Mes/
+// Excepte es poden deixar buits — buit vol dir "tots els dies/mesos"/
+// sense excepció, mateixa lògica que la taula i el calendari).
+const CALENDAR_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masia', 'Dia', 'Mes', 'Any', 'Excepte'], requiredHeaders: ['Masia', 'Any'] },
+  { title: 'Preu', headers: ['PREU/P', 'MÍN', 'PreuComp'] },
+];
+
+function isCalendarSheet() {
+  return state.currentName === CALENDAR_SHEET_NAME;
+}
+
+function getFieldSteps() {
+  return isCalendarSheet() ? CALENDAR_FIELD_STEPS : SERVICE_FIELD_STEPS;
+}
 
 // Pas 3 (condicional): cada camp només apareix si la casella de la
 // columna "conditionHeader" (pas "Opcions") s'ha marcat.

@@ -1,6 +1,10 @@
 // Construcció dels camps del formulari (dispatcher segons tipus de
 // columna), la seva validació al pas "Informació general", i la secció
 // condicional "Altres Extres" (pas de desglossament).
+// Capçaleres numèriques senzilles (sense format de moneda): un
+// <input type="number"> pla.
+const NUMBER_HEADERS = ['MÍN'];
+
 function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
@@ -11,6 +15,15 @@ function buildFieldControl(colIndex, label, isId) {
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
   if (CHECKBOX_HEADERS.indexOf(label) !== -1) return buildCheckboxField(colIndex, initialValue);
   if (CURRENCY_HEADERS.indexOf(label) !== -1) return buildCurrencyField(colIndex, initialValue);
+
+  if (NUMBER_HEADERS.indexOf(label) !== -1) {
+    const numberInput = document.createElement('input');
+    numberInput.type = 'number';
+    numberInput.id = 'addRowField' + colIndex;
+    numberInput.dataset.colIndex = String(colIndex);
+    if (initialValue) numberInput.value = initialValue;
+    return numberInput;
+  }
 
   const input = document.createElement('input');
   input.type = 'text';
@@ -81,10 +94,13 @@ function appendField(container, colIndex, label, control, options) {
 // retorna si es pot avançar.
 function validateStepGeneral() {
   const fieldsWrap = document.getElementById('addRowFields');
+  const step = getFieldSteps()[STEP_GENERAL];
+  const requiredHeaders = step.requiredHeaders || step.headers;
   let allValid = true;
   let firstInvalidField = null;
 
-  getStepColIndexes(FIELD_STEPS[STEP_GENERAL]).forEach(function (colIndex) {
+  getStepColIndexes(step).forEach(function (colIndex) {
+    if (requiredHeaders.indexOf(state.headers[colIndex]) === -1) return;
     const fieldEl = fieldsWrap.querySelector('.modal-field[data-field-index="' + colIndex + '"]');
     if (!fieldEl) return;
     const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');

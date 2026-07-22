@@ -6,6 +6,14 @@ function isIdHeader(header) {
   return String(header == null ? '' : header).trim().toLowerCase() === ID_HEADER;
 }
 
+// "DATA" (full "Preus per dia") es genera sola a partir de Dia/Mes/
+// Excepte (vegeu computeDataDescription_ a Código.js) — mai s'edita a
+// mà, ni des de la taula ni des del formulari.
+const DATA_HEADER = 'DATA';
+function isDataHeader(header) {
+  return String(header == null ? '' : header).trim() === DATA_HEADER;
+}
+
 /* Etiquetes i explicacions llegibles per a cada pestanya del Sheet.
    Els noms de full (claus) no es toquen — només com es mostren aquí.
    Si un full no hi surt (o li canvies el nom a Google Sheets), es mostra

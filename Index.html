@@ -1288,6 +1288,14 @@ function isIdHeader(header) {
   return String(header == null ? '' : header).trim().toLowerCase() === ID_HEADER;
 }
 
+// "DATA" (full "Preus per dia") es genera sola a partir de Dia/Mes/
+// Excepte (vegeu computeDataDescription_ a Código.js) — mai s'edita a
+// mà, ni des de la taula ni des del formulari.
+const DATA_HEADER = 'DATA';
+function isDataHeader(header) {
+  return String(header == null ? '' : header).trim() === DATA_HEADER;
+}
+
 /* Etiquetes i explicacions llegibles per a cada pestanya del Sheet.
    Els noms de full (claus) no es toquen — només com es mostren aquí.
    Si un full no hi surt (o li canvies el nom a Google Sheets), es mostra
@@ -1753,7 +1761,7 @@ const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor
 function buildTableCellControl(header, colIndex, rowIndex, value) {
   const idPrefix = 'tableCellR' + rowIndex + '_';
 
-  if (isIdHeader(header)) {
+  if (isIdHeader(header) || isDataHeader(header)) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'cell-input cell-input-readonly';
@@ -1820,10 +1828,16 @@ function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
   if (newValue === original) return;
   setStatus('Desant...', 'loading');
   google.script.run
-    .withSuccessHandler(function () {
+    .withSuccessHandler(function (result) {
       state.rows[rowIndex][colIndex] = newValue;
+      // En editar Dia/Mes/Excepte, el backend recalcula "DATA" per a
+      // aquesta fila i en retorna el nou text: cal reflectir-ho aquí
+      // (i tornar a pintar la taula, ja que "DATA" pot estar visible).
+      const dataChanged = result && typeof result.dataColIndex === 'number';
+      if (dataChanged) state.rows[rowIndex][result.dataColIndex] = result.dataText;
       setStatus('Desat.', 'success');
       if (onSuccess) onSuccess();
+      if (dataChanged) renderTable();
     })
     .withFailureHandler(function (err) {
       if (onRevert) onRevert();
@@ -2615,7 +2629,7 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, g
 // amb les opcions calculades a partir dels valors ja existents a la
 // columna (una per cel·la, no combinats amb comes). Mateix component
 // visual que el multiselecció (vegeu buildDropdownField a multiselect.js).
-const SELECT_HEADERS = ['Unit'];
+const SELECT_HEADERS = ['Unit', 'Excepte'];
 
 function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, false);
@@ -2672,7 +2686,7 @@ function buildCardToggleField(colIndex, label, initialValue) {
   return card;
 }
 // Capçaleres de moneda: es mostren com a camp numèric amb sufix "€".
-const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X'];
+const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X', 'PREU/P', 'PreuComp'];
 
 // Un <input type="number"> rebutja en silenci qualsevol valor que no
 // sigui un número pur: una cel·la ja existent ve formatada pel Sheet
@@ -3152,11 +3166,30 @@ function buildSwitchSection(colIndex) {
 const SERVICE_NAME_HEADERS = ['Nom Servei', 'NomCAST', 'NomENG'];
 
 // Pantalles fixes del formulari de nova fila (només mostren les
-// columnes de la seva llista que existeixin al full actual).
-const FIELD_STEPS = [
+// columnes de la seva llista que existeixin al full actual). Cada full
+// té el seu propi recorregut: "Serveis" fa servir el flux amb opcions/
+// extres condicionals, "Preus per dia" (calendari) és més senzill i no
+// té cap pas condicional.
+const SERVICE_FIELD_STEPS = [
   { title: 'Informació general', headers: ['Nom Servei', 'NomCAST', 'NomENG', 'Masia', 'Any', 'Preu'] },
   { title: 'Opcions', headers: ['perConvidat', 'Optional', 'quantityBased', 'Extres'] },
 ];
+
+// requiredHeaders: només aquestes són obligatòries al pas 1 (Dia/Mes/
+// Excepte es poden deixar buits — buit vol dir "tots els dies/mesos"/
+// sense excepció, mateixa lògica que la taula i el calendari).
+const CALENDAR_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masia', 'Dia', 'Mes', 'Any', 'Excepte'], requiredHeaders: ['Masia', 'Any'] },
+  { title: 'Preu', headers: ['PREU/P', 'MÍN', 'PreuComp'] },
+];
+
+function isCalendarSheet() {
+  return state.currentName === CALENDAR_SHEET_NAME;
+}
+
+function getFieldSteps() {
+  return isCalendarSheet() ? CALENDAR_FIELD_STEPS : SERVICE_FIELD_STEPS;
+}
 
 // Pas 3 (condicional): cada camp només apareix si la casella de la
 // columna "conditionHeader" (pas "Opcions") s'ha marcat.
@@ -3245,6 +3278,10 @@ function getPlannedStepCount() {
 // Construcció dels camps del formulari (dispatcher segons tipus de
 // columna), la seva validació al pas "Informació general", i la secció
 // condicional "Altres Extres" (pas de desglossament).
+// Capçaleres numèriques senzilles (sense format de moneda): un
+// <input type="number"> pla.
+const NUMBER_HEADERS = ['MÍN'];
+
 function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
@@ -3255,6 +3292,15 @@ function buildFieldControl(colIndex, label, isId) {
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
   if (CHECKBOX_HEADERS.indexOf(label) !== -1) return buildCheckboxField(colIndex, initialValue);
   if (CURRENCY_HEADERS.indexOf(label) !== -1) return buildCurrencyField(colIndex, initialValue);
+
+  if (NUMBER_HEADERS.indexOf(label) !== -1) {
+    const numberInput = document.createElement('input');
+    numberInput.type = 'number';
+    numberInput.id = 'addRowField' + colIndex;
+    numberInput.dataset.colIndex = String(colIndex);
+    if (initialValue) numberInput.value = initialValue;
+    return numberInput;
+  }
 
   const input = document.createElement('input');
   input.type = 'text';
@@ -3325,10 +3371,13 @@ function appendField(container, colIndex, label, control, options) {
 // retorna si es pot avançar.
 function validateStepGeneral() {
   const fieldsWrap = document.getElementById('addRowFields');
+  const step = getFieldSteps()[STEP_GENERAL];
+  const requiredHeaders = step.requiredHeaders || step.headers;
   let allValid = true;
   let firstInvalidField = null;
 
-  getStepColIndexes(FIELD_STEPS[STEP_GENERAL]).forEach(function (colIndex) {
+  getStepColIndexes(step).forEach(function (colIndex) {
+    if (requiredHeaders.indexOf(state.headers[colIndex]) === -1) return;
     const fieldEl = fieldsWrap.querySelector('.modal-field[data-field-index="' + colIndex + '"]');
     if (!fieldEl) return;
     const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
@@ -3394,9 +3443,11 @@ function renderModalStep() {
   const fieldsWrap = document.getElementById('addRowFields');
   fieldsWrap.innerHTML = '';
 
-  const titles = ['Informació general', 'Opcions', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+  const fallbackTitles = ['', '', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+  const steps = getFieldSteps();
+  const stepTitle = (steps[modalStepIndex] && steps[modalStepIndex].title) || fallbackTitles[modalStepIndex] || '';
   document.getElementById('addRowTitle').textContent = 'Nova fila';
-  document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + titles[modalStepIndex];
+  document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + stepTitle;
   document.getElementById('addRowModal').classList.toggle(
     'modal-wide', modalStepIndex === STEP_BREAKDOWN || modalStepIndex === STEP_EXTRAS
   );
@@ -3439,10 +3490,10 @@ function renderModalStep() {
         });
       }
     });
-  } else if (modalStepIndex === STEP_OPTIONS) {
+  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet()) {
     const grid = document.createElement('div');
     grid.className = 'option-card-grid';
-    getStepColIndexes(FIELD_STEPS[STEP_OPTIONS]).forEach(function (colIndex) {
+    getStepColIndexes(getFieldSteps()[STEP_OPTIONS]).forEach(function (colIndex) {
       const label = state.headers[colIndex];
       const card = buildCardToggleField(colIndex, label, modalValues[colIndex]);
       grid.appendChild(card);
@@ -3456,11 +3507,13 @@ function renderModalStep() {
       if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
     });
   } else {
-    getStepColIndexes(FIELD_STEPS[modalStepIndex]).forEach(function (colIndex) {
+    const step = getFieldSteps()[modalStepIndex];
+    const requiredHeaders = modalStepIndex === STEP_GENERAL ? (step.requiredHeaders || step.headers) : [];
+    getStepColIndexes(step).forEach(function (colIndex) {
       const label = state.headers[colIndex];
       appendField(
         fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)),
-        { required: modalStepIndex === STEP_GENERAL }
+        { required: requiredHeaders.indexOf(label) !== -1 }
       );
     });
   }

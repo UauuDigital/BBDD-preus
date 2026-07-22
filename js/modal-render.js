@@ -23,9 +23,11 @@ function renderModalStep() {
   const fieldsWrap = document.getElementById('addRowFields');
   fieldsWrap.innerHTML = '';
 
-  const titles = ['Informació general', 'Opcions', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+  const fallbackTitles = ['', '', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+  const steps = getFieldSteps();
+  const stepTitle = (steps[modalStepIndex] && steps[modalStepIndex].title) || fallbackTitles[modalStepIndex] || '';
   document.getElementById('addRowTitle').textContent = 'Nova fila';
-  document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + titles[modalStepIndex];
+  document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + stepTitle;
   document.getElementById('addRowModal').classList.toggle(
     'modal-wide', modalStepIndex === STEP_BREAKDOWN || modalStepIndex === STEP_EXTRAS
   );
@@ -68,10 +70,10 @@ function renderModalStep() {
         });
       }
     });
-  } else if (modalStepIndex === STEP_OPTIONS) {
+  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet()) {
     const grid = document.createElement('div');
     grid.className = 'option-card-grid';
-    getStepColIndexes(FIELD_STEPS[STEP_OPTIONS]).forEach(function (colIndex) {
+    getStepColIndexes(getFieldSteps()[STEP_OPTIONS]).forEach(function (colIndex) {
       const label = state.headers[colIndex];
       const card = buildCardToggleField(colIndex, label, modalValues[colIndex]);
       grid.appendChild(card);
@@ -85,11 +87,13 @@ function renderModalStep() {
       if (checkbox) checkbox.addEventListener('change', updateModalNavButtons);
     });
   } else {
-    getStepColIndexes(FIELD_STEPS[modalStepIndex]).forEach(function (colIndex) {
+    const step = getFieldSteps()[modalStepIndex];
+    const requiredHeaders = modalStepIndex === STEP_GENERAL ? (step.requiredHeaders || step.headers) : [];
+    getStepColIndexes(step).forEach(function (colIndex) {
       const label = state.headers[colIndex];
       appendField(
         fieldsWrap, colIndex, label, buildFieldControl(colIndex, label, isIdHeader(label)),
-        { required: modalStepIndex === STEP_GENERAL }
+        { required: requiredHeaders.indexOf(label) !== -1 }
       );
     });
   }

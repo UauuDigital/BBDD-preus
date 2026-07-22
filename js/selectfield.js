@@ -2,7 +2,7 @@
 // amb les opcions calculades a partir dels valors ja existents a la
 // columna (una per cel·la, no combinats amb comes). Mateix component
 // visual que el multiselecció (vegeu buildDropdownField a multiselect.js).
-const SELECT_HEADERS = ['Unit'];
+const SELECT_HEADERS = ['Unit', 'Excepte'];
 
 function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, false);

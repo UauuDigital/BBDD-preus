@@ -11,7 +11,7 @@ const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Any': getYearRelativeColor
 function buildTableCellControl(header, colIndex, rowIndex, value) {
   const idPrefix = 'tableCellR' + rowIndex + '_';
 
-  if (isIdHeader(header)) {
+  if (isIdHeader(header) || isDataHeader(header)) {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'cell-input cell-input-readonly';
@@ -78,10 +78,16 @@ function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
   if (newValue === original) return;
   setStatus('Desant...', 'loading');
   google.script.run
-    .withSuccessHandler(function () {
+    .withSuccessHandler(function (result) {
       state.rows[rowIndex][colIndex] = newValue;
+      // En editar Dia/Mes/Excepte, el backend recalcula "DATA" per a
+      // aquesta fila i en retorna el nou text: cal reflectir-ho aquí
+      // (i tornar a pintar la taula, ja que "DATA" pot estar visible).
+      const dataChanged = result && typeof result.dataColIndex === 'number';
+      if (dataChanged) state.rows[rowIndex][result.dataColIndex] = result.dataText;
       setStatus('Desat.', 'success');
       if (onSuccess) onSuccess();
+      if (dataChanged) renderTable();
     })
     .withFailureHandler(function (err) {
       if (onRevert) onRevert();
