@@ -1333,7 +1333,7 @@ function isDataHeader(header) {
    el seu nom tal qual, sense hint. */
 const SHEET_INFO = {
   'Hoja 1': { label: 'Serveis', hint: 'Serveis addicionals (DJ, menús, fotografia...): preu i a quines finques i anys s\'apliquen.' },
-  'PreusMenu': { label: 'Preus per dia', hint: 'Preu per persona segons finca, any, dia de la setmana i mes.' },
+  'PreusMenu': { label: 'Preus menu', hint: 'Preu per persona segons finca, any, dia de la setmana i mes.' },
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
 };
 
@@ -1389,6 +1389,9 @@ const state = {
   calendarLevel: 'years',
   calendarYear: null,
   calendarRefDate: new Date(),
+  // Cau de dades ja carregades per full (nom -> {headers, rows}), perquè
+  // canviar de pestanya no obligui a tornar a demanar-les al servidor.
+  sheetCache: {},
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
@@ -1642,8 +1645,18 @@ function renderTabs() {
       state.sortDirection = 'asc';
       state.view = 'table';
       renderTabs();
-      renderSkeleton(state.headers.length || 3, 5);
-      loadCurrentSheet();
+      const cached = state.sheetCache[sheet.name];
+      if (cached) {
+        // Ja la tenim: es mostra a l'instant i es refresca en segon pla
+        // per si el full de càlcul ha canviat mentrestant.
+        applySheetData(cached);
+        renderCurrentView();
+        setStatus(state.rows.length + ' files carregades.', 'success');
+        loadCurrentSheet(true);
+      } else {
+        renderSkeleton(state.headers.length || 3, 5);
+        loadCurrentSheet();
+      }
     });
     nav.appendChild(btn);
   });
@@ -3767,18 +3780,30 @@ function onMetaLoaded(sheets) {
   loadCurrentSheet();
 }
 
-function loadCurrentSheet() {
-  setStatus('Carregant...', 'loading');
-  google.script.run.withSuccessHandler(onSheetLoaded).withFailureHandler(onError).getSheetData(state.currentName);
+function loadCurrentSheet(silent) {
+  const requestedName = state.currentName;
+  if (!silent) setStatus('Carregant...', 'loading');
+  google.script.run
+    .withSuccessHandler(function (data) { onSheetLoaded(data, requestedName, silent); })
+    .withFailureHandler(silent ? function () {} : onError)
+    .getSheetData(requestedName);
 }
 
-function onSheetLoaded(data) {
+function applySheetData(data) {
   state.headers = data.headers || [];
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
+}
+
+function onSheetLoaded(data, requestedName, silent) {
+  state.sheetCache[requestedName] = data;
+  // Descarta la resposta si l'usuari ja ha canviat a una altra pestanya
+  // mentre esperàvem el servidor (rellevant sobretot en refrescos silenciosos).
+  if (requestedName !== state.currentName) return;
+  applySheetData(data);
   renderCurrentView();
-  setStatus(state.rows.length + ' files carregades.', 'success');
+  if (!silent) setStatus(state.rows.length + ' files carregades.', 'success');
 }
 
 function handleAddRow() {
