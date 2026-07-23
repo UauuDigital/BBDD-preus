@@ -74,7 +74,10 @@ thead th {
   color: var(--fg-tertiary);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  opacity: 0.55;
+  /* 0,55 donava ~1,8:1 de contrast en repòs, per sota del mínim 3:1
+     (WCAG 1.4.11) per a components no textuals; 0,75 hi arriba amb
+     marge sense perdre l'efecte de "es marca més en fer hover". */
+  opacity: 0.75;
   transition: opacity var(--duration) var(--ease-out), background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
 }
 tr:hover .icon-btn,

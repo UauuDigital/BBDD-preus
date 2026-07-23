@@ -48,6 +48,15 @@ function getFieldControlValue(colIndex) {
   return el ? String(el.value || '') : '';
 }
 
+// L'element que ha de rebre aria-required/aria-invalid/aria-describedby:
+// el trigger visible d'un desplegable (un <div> embolcall no és
+// focusable) o, si no n'hi ha, l'input real amb data-col-index.
+function getFieldAriaTarget(fieldEl) {
+  const trigger = fieldEl.querySelector('.multiselect-trigger');
+  if (trigger) return trigger;
+  return fieldEl.querySelector('[data-col-index]');
+}
+
 function appendField(container, colIndex, label, control, options) {
   options = options || {};
   const field = document.createElement('div');
@@ -73,17 +82,28 @@ function appendField(container, colIndex, label, control, options) {
   field.appendChild(control);
 
   if (options.required) {
+    const ariaTarget = getFieldAriaTarget(field);
+    const errorId = 'addRowFieldError' + colIndex;
+
     const error = document.createElement('p');
     error.className = 'modal-field-error';
+    error.id = errorId;
     error.textContent = 'Aquest camp és obligatori.';
     field.appendChild(error);
 
-    field.addEventListener('input', function () {
-      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
-    });
-    field.addEventListener('change', function () {
-      if (getFieldControlValue(colIndex).trim() !== '') field.classList.remove('is-invalid');
-    });
+    if (ariaTarget) {
+      ariaTarget.setAttribute('aria-required', 'true');
+      ariaTarget.setAttribute('aria-describedby', errorId);
+      if (ariaTarget.tagName === 'INPUT') ariaTarget.required = true;
+    }
+
+    const clearInvalid = function () {
+      if (getFieldControlValue(colIndex).trim() === '') return;
+      field.classList.remove('is-invalid');
+      if (ariaTarget) ariaTarget.setAttribute('aria-invalid', 'false');
+    };
+    field.addEventListener('input', clearInvalid);
+    field.addEventListener('change', clearInvalid);
   }
 
   container.appendChild(field);
@@ -107,6 +127,8 @@ function validateStepGeneral() {
     const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
     const isEmpty = !disabledControl && getFieldControlValue(colIndex).trim() === '';
     fieldEl.classList.toggle('is-invalid', isEmpty);
+    const ariaTarget = getFieldAriaTarget(fieldEl);
+    if (ariaTarget) ariaTarget.setAttribute('aria-invalid', isEmpty ? 'true' : 'false');
     if (isEmpty) {
       allValid = false;
       if (!firstInvalidField) firstInvalidField = fieldEl;

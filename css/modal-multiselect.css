@@ -36,7 +36,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1px solid rgba(28, 28, 26, 0.15);
+  border: 1px solid var(--dot-border);
   flex-shrink: 0;
 }
 .multiselect-trigger-chevron {
@@ -90,7 +90,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1px solid rgba(28, 28, 26, 0.15);
+  border: 1px solid var(--dot-border);
   flex-shrink: 0;
 }
 

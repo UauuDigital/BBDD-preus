@@ -3,6 +3,7 @@
    --------------------------------------------------------- */
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
@@ -52,12 +53,13 @@
 
 .table-filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 .table-filters[hidden] { display: none; }
 
-.table-filters .table-filter { width: 150px; }
+.table-filters .table-filter { flex: 1 1 140px; max-width: 200px; }
 
 .simplify-toggle {
   display: inline-flex;

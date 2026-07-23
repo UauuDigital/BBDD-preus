@@ -90,7 +90,14 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --duration: 160ms;
+
+  /* Vora dels punts de color (Masia/Any/calendari): un sol token en
+     lloc de repetir el mateix rgba() a diversos fitxers CSS. */
+  --dot-border: rgba(28, 28, 26, 0.15);
 }
+
+/* Decisió deliberada: aquesta eina interna no ofereix mode fosc (no hi
+   ha cap bloc "prefers-color-scheme: dark"). No és un oblit. */
 
 * { box-sizing: border-box; }
 
