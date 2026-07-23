@@ -274,13 +274,15 @@ button, input {
 
 .table-filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-2);
+  overflow-x: auto;
+  max-width: 100%;
 }
 .table-filters[hidden] { display: none; }
 
-.table-filters .table-filter { flex: 1 1 140px; max-width: 200px; }
+.table-filters .table-filter { flex: 0 0 140px; }
 
 .simplify-toggle {
   display: inline-flex;
@@ -1335,13 +1337,33 @@ const SHEET_INFO = {
   'Hoja 1': { label: 'Serveis', hint: 'Serveis addicionals (DJ, menús, fotografia...): preu i a quines finques i anys s\'apliquen.' },
   'PreusMenu': { label: 'Preus menu', hint: 'Preu per persona segons finca, any, dia de la setmana i mes.' },
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
+  'Coctel': { label: 'Còctel', hint: 'Preu per persona i mínim de convidats segons masia, any, dia de la setmana i mes. Mas Vivencs comparteix taula amb Can Macià.' },
+  'CoctelExtres': { label: 'Extres Còctel', hint: 'Extres propis del format Còctel (menú infantil, aperitiu al jardí...): preu i masia/any als quals s\'apliquen.' },
 };
 
 // Fulls on s'ofereixen filtres (vegeu renderFilters a render.js): els
-// noms tècnics de "Serveis" i "Preus per dia".
+// noms tècnics de "Serveis", "Preus per dia" i "Còctel".
 const SERVICES_SHEET_NAME = 'Hoja 1';
 const CALENDAR_SHEET_NAME = 'PreusMenu';
 const BARRA_SHEET_NAME = 'BarraLliure';
+const COCTEL_SHEET_NAME = 'Coctel';
+const COCTEL_EXTRES_SHEET_NAME = 'CoctelExtres';
+
+// Fulls amb vista de calendari (commutador Taula/Calendari): mateixa
+// lògica per a tots (any → mes → dia), però cadascun amb les seves
+// pròpies columnes de "mínim"/"preu" (vegeu CALENDAR_COLUMNS_BY_SHEET).
+const CALENDAR_VIEW_SHEETS = [CALENDAR_SHEET_NAME, COCTEL_SHEET_NAME];
+function isCalendarViewSheet(sheetName) {
+  return CALENDAR_VIEW_SHEETS.indexOf(sheetName) !== -1;
+}
+
+// Noms de columna que la vista de calendari fa servir per mostrar el
+// mínim de convidats i el preu, diferents a cada full de calendari.
+// preuComp (preu compensat) només existeix a "Preus menu".
+const CALENDAR_COLUMNS_BY_SHEET = {
+  'PreusMenu': { min: 'MÍN', preuP: 'PREU/P', preuComp: 'PreuComp' },
+  'Coctel': { min: 'MinConvidats', preuP: 'PreuPersona', preuComp: null },
+};
 
 // Columnes que es veuen a la taula de cada full quan la casella
 // "Simplifica" està activada (per defecte ho està). Els fulls que no
@@ -1349,6 +1371,8 @@ const BARRA_SHEET_NAME = 'BarraLliure';
 const SIMPLIFY_TABLE_COLUMNS_BY_SHEET = {
   'PreusMenu': ['DATA', 'MÍN', 'PREU/P', 'Masia', 'Any'],
   'Hoja 1': ['Nom Servei', 'Masia', 'Any', 'Preu'],
+  'Coctel': ['Masia', 'Any', 'Dia', 'Mes', 'MinConvidats', 'PreuPersona', 'PenalitzacioPerPersona'],
+  'CoctelExtres': ['Nom Servei', 'Masia', 'Any', 'PreuPersona'],
 };
 function isSimplifiableSheet(sheetName) {
   return Object.prototype.hasOwnProperty.call(SIMPLIFY_TABLE_COLUMNS_BY_SHEET, sheetName);
@@ -1365,6 +1389,10 @@ const COLUMN_WIDTH_CLASSES = {
   'MÍN': 'col-narrow',
   'PREU/P': 'col-narrow',
   'Any': 'col-narrow',
+  'MinConvidats': 'col-narrow',
+  'PreuPersona': 'col-narrow',
+  'PenalitzacioPerPersona': 'col-narrow',
+  'MinimEuros': 'col-narrow',
 };
 function columnClassFor(header) {
   return COLUMN_WIDTH_CLASSES[header] || null;
@@ -1668,13 +1696,14 @@ function renderTabs() {
   renderViewToggle();
 }
 
-// Commutador Taula/Calendari: només al full "Preus per dia". No depèn
-// de les dades (a diferència dels filtres), es pot construir tan bon
-// punt se sap quin full s'ha seleccionat.
+// Commutador Taula/Calendari: només als fulls de CALENDAR_VIEW_SHEETS
+// ("Preus menu" i "Còctel"). No depèn de les dades (a diferència dels
+// filtres), es pot construir tan bon punt se sap quin full s'ha
+// seleccionat.
 function renderViewToggle() {
   const container = document.getElementById('viewToggle');
   container.innerHTML = '';
-  container.hidden = state.currentName !== CALENDAR_SHEET_NAME;
+  container.hidden = !isCalendarViewSheet(state.currentName);
   if (container.hidden) return;
 
   [
@@ -1696,11 +1725,11 @@ function renderViewToggle() {
   });
 }
 
-// Mostra la taula o el calendari segons state.view (només rellevant al
-// full "Preus per dia" — a la resta sempre és la taula), i el joc de
-// filtres corresponent (vegeu renderFilters a render-filters.js).
+// Mostra la taula o el calendari segons state.view (només rellevant als
+// fulls de CALENDAR_VIEW_SHEETS — a la resta sempre és la taula), i el
+// joc de filtres corresponent (vegeu renderFilters a render-filters.js).
 function renderCurrentView() {
-  const isCalendar = state.view === 'calendar' && state.currentName === CALENDAR_SHEET_NAME;
+  const isCalendar = state.view === 'calendar' && isCalendarViewSheet(state.currentName);
   document.getElementById('tableWrap').hidden = isCalendar;
   document.getElementById('calendarView').hidden = !isCalendar;
   renderFilters();
@@ -1736,7 +1765,7 @@ function buildFilterField(def) {
   if (colIndex === -1) return null;
 
   const field = buildDropdownField(
-    colIndex, def.selected.join(', '), getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header,
+    colIndex, def.selected.join(', '), getFixedOptionsForHeader(def.header) || getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header,
     FILTER_OPTION_COLORS[def.header]
   );
   field.classList.add('table-filter');
@@ -1748,12 +1777,19 @@ function buildFilterField(def) {
   return field;
 }
 
-function buildClearFiltersButton() {
+// visible=false l'amaga sense treure-la del flux (visibility, no
+// display), perquè els altres filtres no es reposicionin en aparèixer
+// o desaparèixer el botó.
+function buildClearFiltersButton(visible) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn btn-ghost';
   btn.textContent = 'Neteja filtres';
   btn.addEventListener('click', clearAllFilters);
+  if (!visible) {
+    btn.style.visibility = 'hidden';
+    btn.tabIndex = -1;
+  }
   return btn;
 }
 
@@ -1764,8 +1800,8 @@ function buildClearFiltersButton() {
 // (state.filterDia, etc.): un filtre aplicat des d'un dia del calendari
 // (vegeu goToTableFilteredByDate) es veu reflectit en canviar a la taula.
 function renderFilters() {
-  const isCalendar = state.view === 'calendar' && state.currentName === CALENDAR_SHEET_NAME;
-  const showTableFilters = !isCalendar && (state.currentName === SERVICES_SHEET_NAME || state.currentName === CALENDAR_SHEET_NAME);
+  const isCalendar = state.view === 'calendar' && isCalendarViewSheet(state.currentName);
+  const showTableFilters = !isCalendar && (state.currentName === SERVICES_SHEET_NAME || state.currentName === CALENDAR_SHEET_NAME || state.currentName === COCTEL_SHEET_NAME);
   const showCalendarFilters = isCalendar;
 
   const tableContainer = document.getElementById('tableFilters');
@@ -1781,7 +1817,7 @@ function renderFilters() {
       const field = buildFilterField(def);
       if (field) tableContainer.appendChild(field);
     });
-    if (hasAnyFilterSelected()) tableContainer.appendChild(buildClearFiltersButton());
+    tableContainer.appendChild(buildClearFiltersButton(hasAnyFilterSelected()));
   }
 
   const calendarContainer = document.getElementById('calendarFilters');
@@ -1792,7 +1828,7 @@ function renderFilters() {
       { header: 'Masia', selected: state.filterMasia, apply: function (values) { state.filterMasia = values; } }
     );
     if (masiaField) calendarContainer.appendChild(masiaField);
-    if (state.filterMasia.length) calendarContainer.appendChild(buildClearFiltersButton());
+    calendarContainer.appendChild(buildClearFiltersButton(Boolean(state.filterMasia.length)));
   }
 }
 
@@ -1836,7 +1872,7 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
 
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildMultiselectField(colIndex, value, undefined, idPrefix, CELL_OPTION_COLORS[header]);
+    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {
@@ -1922,6 +1958,11 @@ const MONTH_NAMES_CA = [
 ];
 const WEEKDAY_HEADER_NAMES_CA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
 
+// Llista fixa dels 7 dies (com MASIA_OPTIONS per a Masia): opcions dels
+// desplegables de la columna "Dia" a tots els fulls, en lloc de derivar-
+// les només dels valors que ja existeixen en aquell full concret.
+const WEEKDAY_OPTIONS_CA = ['Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte', 'Diumenge'];
+
 // Alguns dies de la setmana en català varien en singular/plural (les
 // columnes fan servir totes dues formes indistintament: "Dissabte" i
 // "Dissabtes"). 0 = diumenge, igual que Date#getDay().
@@ -1989,15 +2030,16 @@ function isExceptedDate(exceptionText, cellDate) {
 }
 
 function getCalendarColIndexes() {
+  const priceCols = CALENDAR_COLUMNS_BY_SHEET[state.currentName] || {};
   return {
     dia: state.headers.indexOf('Dia'),
     mes: state.headers.indexOf('Mes'),
     excepte: state.headers.indexOf('Excepte'),
     masia: state.headers.indexOf('Masia'),
     any: state.headers.indexOf('Any'),
-    min: state.headers.indexOf('MÍN'),
-    preuP: state.headers.indexOf('PREU/P'),
-    preuComp: state.headers.indexOf('PreuComp'),
+    min: state.headers.indexOf(priceCols.min || 'MÍN'),
+    preuP: state.headers.indexOf(priceCols.preuP || 'PREU/P'),
+    preuComp: priceCols.preuComp ? state.headers.indexOf(priceCols.preuComp) : -1,
   };
 }
 
@@ -2043,6 +2085,22 @@ const MASIA_COLOR_RULES = [
   { match: 'Tous', color: 'var(--masia-tous)' },
   { match: 'Vivencs', color: 'var(--masia-vivencs)' },
 ];
+
+// Llista fixa de les 4 masies: es fa servir com a opcions de tots els
+// desplegables "Masia"/"Masies" (filtres, taula i formulari "+ Fila"),
+// en lloc de derivar-les només dels valors que ja existeixen en aquell
+// full concret — així un full nou o amb poques files ja les mostra totes.
+const MASIA_OPTIONS = ["Ca n'Alzina", 'Castell de Tous', 'Can Macià', 'Mas Vivencs'];
+
+// Retorna la llista fixa d'opcions per a les capçaleres que en tenen
+// una (Masia/Masies, Dia, Mes), o null si la capçalera no en té —
+// en aquest cas cal seguir derivant-les dels valors ja presents al full.
+function getFixedOptionsForHeader(header) {
+  if (header === 'Masia' || header === 'Masies') return MASIA_OPTIONS;
+  if (header === 'Dia') return WEEKDAY_OPTIONS_CA;
+  if (header === 'Mes') return MONTH_NAMES_CA;
+  return null;
+}
 
 function getMasiaColor(masiaName) {
   const rule = MASIA_COLOR_RULES.find(function (r) { return masiaName && masiaName.indexOf(r.match) !== -1; });
@@ -2627,9 +2685,23 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
     panel.appendChild(optionLabel);
   });
 
+  // Si no hi ha prou espai a sota (files properes al final de la
+  // taula/finestra), el panell s'obre cap amunt en lloc de quedar
+  // tallat per la vora de la pantalla.
   function repositionPanel() {
     const rect = trigger.getBoundingClientRect();
-    panel.style.top = (rect.bottom + 4) + 'px';
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const openUpward = spaceBelow < 150 && spaceAbove > spaceBelow;
+
+    panel.style.maxHeight = Math.max(100, Math.min(200, openUpward ? spaceAbove : spaceBelow)) + 'px';
+    if (openUpward) {
+      panel.style.top = '';
+      panel.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    } else {
+      panel.style.bottom = '';
+      panel.style.top = (rect.bottom + 4) + 'px';
+    }
     panel.style.left = rect.left + 'px';
     panel.style.width = rect.width + 'px';
   }
@@ -2643,16 +2715,23 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
     // detecta tant el scroll de la finestra com el d'un contenidor
     // intern amb overflow (.modal-fields, .table-wrap...) sense haver
     // de conèixer quin és — funciona igual dins el modal que a la
-    // barra d'eines de la taula.
-    window.addEventListener('scroll', closePanel, { passive: true, capture: true });
+    // barra d'eines de la taula. Però el propi scroll intern del panell
+    // (quan hi ha moltes opcions) també arriba per aquí en fase de
+    // captura, així que cal ignorar-lo o mai es podria fer scroll dins.
+    window.addEventListener('scroll', handleOutsideScroll, { passive: true, capture: true });
     window.addEventListener('resize', closePanel);
+  }
+
+  function handleOutsideScroll(event) {
+    if (panel.contains(event.target)) return;
+    closePanel();
   }
 
   function closePanel() {
     panel.hidden = true;
     trigger.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
-    window.removeEventListener('scroll', closePanel, { capture: true });
+    window.removeEventListener('scroll', handleOutsideScroll, { capture: true });
     window.removeEventListener('resize', closePanel);
   }
   panel._closeMultiselect = closePanel;
@@ -2750,7 +2829,7 @@ function buildCardToggleField(colIndex, label, initialValue) {
   return card;
 }
 // Capçaleres de moneda: es mostren com a camp numèric amb sufix "€".
-const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X', 'PREU/P', 'PreuComp'];
+const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X', 'PREU/P', 'PreuComp', 'PreuPersona', 'PenalitzacioPerPersona', 'MinimEuros'];
 
 // Un <input type="number"> rebutja en silenci qualsevol valor que no
 // sigui un número pur: una cel·la ja existent ve formatada pel Sheet
@@ -3305,6 +3384,19 @@ const BARRA_FIELD_STEPS = [
   { title: 'Preu', headers: ['Preu', 'SiMin€', 'NoMin€'] },
 ];
 
+// "Coctel": Dia/Mes buits = "tots els dies/mesos" (mateixa lògica que
+// "Preus per dia"). Mas Vivencs no és un valor propi de Masia: es
+// mapeja a "Can Macià" des de la calculadora, no des d'aquest full.
+const COCTEL_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masia', 'Any', 'Dia', 'Mes'], requiredHeaders: ['Masia', 'Any'] },
+  { title: 'Preu', headers: ['MinConvidats', 'PreuPersona', 'PenalitzacioPerPersona'] },
+];
+
+const COCTEL_EXTRES_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Nom Servei', 'NomCAST', 'NomENG', 'Masia', 'Any'], requiredHeaders: ['Nom Servei'] },
+  { title: 'Preu', headers: ['PreuPersona', 'MinimEuros'] },
+];
+
 function isCalendarSheet() {
   return state.currentName === CALENDAR_SHEET_NAME;
 }
@@ -3313,9 +3405,19 @@ function isBarraSheet() {
   return state.currentName === BARRA_SHEET_NAME;
 }
 
+function isCoctelSheet() {
+  return state.currentName === COCTEL_SHEET_NAME;
+}
+
+function isCoctelExtresSheet() {
+  return state.currentName === COCTEL_EXTRES_SHEET_NAME;
+}
+
 function getFieldSteps() {
   if (isCalendarSheet()) return CALENDAR_FIELD_STEPS;
   if (isBarraSheet()) return BARRA_FIELD_STEPS;
+  if (isCoctelSheet()) return COCTEL_FIELD_STEPS;
+  if (isCoctelExtresSheet()) return COCTEL_EXTRES_FIELD_STEPS;
   return SERVICE_FIELD_STEPS;
 }
 
@@ -3408,13 +3510,14 @@ function getPlannedStepCount() {
 // condicional "Altres Extres" (pas de desglossament).
 // Capçaleres numèriques senzilles (sense format de moneda): un
 // <input type="number"> pla.
-const NUMBER_HEADERS = ['MÍN'];
+const NUMBER_HEADERS = ['MÍN', 'MinConvidats'];
 
 function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
   if (MULTISELECT_HEADERS.indexOf(label) !== -1) {
-    return buildMultiselectField(colIndex, initialValue, undefined, undefined, (label === 'Masia' || label === 'Masies') ? getMasiaColor : undefined);
+    const isMasiaHeader = label === 'Masia' || label === 'Masies';
+    return buildMultiselectField(colIndex, initialValue, getFixedOptionsForHeader(label) || undefined, undefined, isMasiaHeader ? getMasiaColor : undefined);
   }
   if (label === YEAR_HEADER) return buildYearField(colIndex, initialValue, undefined, getYearRelativeColor);
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);
@@ -3641,7 +3744,7 @@ function renderModalStep() {
         });
       }
     });
-  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet() && !isBarraSheet()) {
+  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet() && !isBarraSheet() && !isCoctelSheet() && !isCoctelExtresSheet()) {
     const grid = document.createElement('div');
     grid.className = 'option-card-grid';
     getStepColIndexes(getFieldSteps()[STEP_OPTIONS]).forEach(function (colIndex) {
