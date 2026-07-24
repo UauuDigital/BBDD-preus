@@ -684,6 +684,37 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 
 .modal-field-required { color: var(--color-danger); }
 
+/* Icona ⓘ d'ajuda al costat del nom del camp: mateixa vinyeta fosca
+   que la resta de tooltips de l'app (vegeu [data-tooltip]::before a
+   layout.css), a la dreta perquè no quedi tallada pel scroll vertical
+   de .modal-fields. */
+.field-help-icon {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: var(--space-1);
+  color: var(--fg-tertiary);
+  cursor: help;
+}
+.field-help-icon:hover,
+.field-help-icon:focus-visible { color: var(--fg-primary); }
+.field-help-icon:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.field-help-icon[data-tooltip]::before {
+  left: calc(100% + var(--space-2));
+  top: 50%;
+  max-width: 220px;
+  font-weight: 400;
+  transform: translateY(-50%) translateX(-4px);
+}
+.field-help-icon[data-tooltip]:hover::before,
+.field-help-icon[data-tooltip]:focus-visible::before {
+  transform: translateY(-50%) translateX(0);
+}
+
 .modal-field-error {
   display: none;
   margin: var(--space-1) 0 0;
@@ -1402,6 +1433,7 @@ const ICONS = {
   chevron: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.25 8 10l4-3.75"/></svg>',
   check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>',
   duplicate: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1"/><path d="M10.5 5.5V3.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2"/></svg>',
+  info: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.25v4M8 5.1v.05"/></svg>',
 };
 // Nom de la columna d'identificador autogenerat (mateixa lògica que
 // isIdHeader_ a Código.js: es compara ignorant majúscules/minúscules).
@@ -3646,6 +3678,49 @@ function buildFieldControl(colIndex, label, isId) {
   return input;
 }
 
+// Text explicatiu per a les capçaleres que en necessiten (surt com a
+// vinyeta, mateix estil que la resta de tooltips de l'app, en clicar/
+// passar per sobre la icona ⓘ al costat del nom del camp). Les que no
+// hi són no en mostren cap — el nom de la columna ja n'hi ha prou.
+const FIELD_HELP_TEXT = {
+  'Nom Servei': 'Nom en català. Si l\'escrius aquí, es tradueix sol a NomCAST i NomENG.',
+  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'Masia': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
+  'Masies': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
+  'Any': 'Temporada a la qual s\'aplica el preu.',
+  'Preu': 'Preu sense IVA.',
+  'perConvidat': 'Marca-ho si el preu es multiplica pel nombre de convidats (en lloc de ser un preu fix).',
+  'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
+  'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
+  'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
+  'Dia': 'Dia(es) de la setmana als quals s\'aplica. Buit = tots els dies.',
+  'Mes': 'Mes(os) als quals s\'aplica. Buit = tots els mesos.',
+  'Excepte': 'Data concreta que queda exclosa d\'aquesta regla (p.ex. un festiu).',
+  'PREU/P': 'Preu per persona d\'aquesta franja.',
+  'MÍN': 'Mínim de convidats per aplicar aquest preu.',
+  'PreuComp': 'Preu "compensat" alternatiu, mostrat al calendari quan no s\'arriba al mínim.',
+  'SiMin€': 'Preu per persona quan SÍ s\'arriba al mínim de convidats.',
+  'NoMin€': 'Preu per persona quan NO s\'arriba al mínim de convidats.',
+  'MinConvidats': 'Mínim de convidats per aplicar aquesta franja de preu.',
+  'PreuPersona': 'Preu per persona d\'aquesta franja.',
+  'PenalitzacioPerPersona': 'Recàrrec per persona que falta per arribar al mínim de convidats.',
+  'MinimEuros': 'Import mínim en euros d\'aquest extra, independentment del nombre de persones.',
+};
+
+function buildFieldHelpIcon(label) {
+  const helpText = FIELD_HELP_TEXT[label];
+  if (!helpText) return null;
+  const icon = document.createElement('span');
+  icon.className = 'field-help-icon';
+  icon.dataset.tooltip = helpText;
+  icon.setAttribute('tabindex', '0');
+  icon.setAttribute('role', 'note');
+  icon.setAttribute('aria-label', helpText);
+  icon.innerHTML = ICONS.info;
+  return icon;
+}
+
 function getFieldControlValue(colIndex) {
   const el = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
   return el ? String(el.value || '') : '';
@@ -3680,6 +3755,8 @@ function appendField(container, colIndex, label, control, options) {
     asterisk.setAttribute('aria-hidden', 'true');
     fieldLabel.appendChild(asterisk);
   }
+  const helpIcon = buildFieldHelpIcon(label);
+  if (helpIcon) fieldLabel.appendChild(helpIcon);
 
   field.appendChild(fieldLabel);
   field.appendChild(control);

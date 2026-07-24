@@ -44,6 +44,49 @@ function buildFieldControl(colIndex, label, isId) {
   return input;
 }
 
+// Text explicatiu per a les capçaleres que en necessiten (surt com a
+// vinyeta, mateix estil que la resta de tooltips de l'app, en clicar/
+// passar per sobre la icona ⓘ al costat del nom del camp). Les que no
+// hi són no en mostren cap — el nom de la columna ja n'hi ha prou.
+const FIELD_HELP_TEXT = {
+  'Nom Servei': 'Nom en català. Si l\'escrius aquí, es tradueix sol a NomCAST i NomENG.',
+  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'Masia': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
+  'Masies': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
+  'Any': 'Temporada a la qual s\'aplica el preu.',
+  'Preu': 'Preu sense IVA.',
+  'perConvidat': 'Marca-ho si el preu es multiplica pel nombre de convidats (en lloc de ser un preu fix).',
+  'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
+  'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
+  'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
+  'Dia': 'Dia(es) de la setmana als quals s\'aplica. Buit = tots els dies.',
+  'Mes': 'Mes(os) als quals s\'aplica. Buit = tots els mesos.',
+  'Excepte': 'Data concreta que queda exclosa d\'aquesta regla (p.ex. un festiu).',
+  'PREU/P': 'Preu per persona d\'aquesta franja.',
+  'MÍN': 'Mínim de convidats per aplicar aquest preu.',
+  'PreuComp': 'Preu "compensat" alternatiu, mostrat al calendari quan no s\'arriba al mínim.',
+  'SiMin€': 'Preu per persona quan SÍ s\'arriba al mínim de convidats.',
+  'NoMin€': 'Preu per persona quan NO s\'arriba al mínim de convidats.',
+  'MinConvidats': 'Mínim de convidats per aplicar aquesta franja de preu.',
+  'PreuPersona': 'Preu per persona d\'aquesta franja.',
+  'PenalitzacioPerPersona': 'Recàrrec per persona que falta per arribar al mínim de convidats.',
+  'MinimEuros': 'Import mínim en euros d\'aquest extra, independentment del nombre de persones.',
+};
+
+function buildFieldHelpIcon(label) {
+  const helpText = FIELD_HELP_TEXT[label];
+  if (!helpText) return null;
+  const icon = document.createElement('span');
+  icon.className = 'field-help-icon';
+  icon.dataset.tooltip = helpText;
+  icon.setAttribute('tabindex', '0');
+  icon.setAttribute('role', 'note');
+  icon.setAttribute('aria-label', helpText);
+  icon.innerHTML = ICONS.info;
+  return icon;
+}
+
 function getFieldControlValue(colIndex) {
   const el = document.querySelector('#addRowFields [data-col-index="' + colIndex + '"]');
   return el ? String(el.value || '') : '';
@@ -78,6 +121,8 @@ function appendField(container, colIndex, label, control, options) {
     asterisk.setAttribute('aria-hidden', 'true');
     fieldLabel.appendChild(asterisk);
   }
+  const helpIcon = buildFieldHelpIcon(label);
+  if (helpIcon) fieldLabel.appendChild(helpIcon);
 
   field.appendChild(fieldLabel);
   field.appendChild(control);

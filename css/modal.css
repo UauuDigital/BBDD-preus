@@ -87,6 +87,37 @@
 
 .modal-field-required { color: var(--color-danger); }
 
+/* Icona ⓘ d'ajuda al costat del nom del camp: mateixa vinyeta fosca
+   que la resta de tooltips de l'app (vegeu [data-tooltip]::before a
+   layout.css), a la dreta perquè no quedi tallada pel scroll vertical
+   de .modal-fields. */
+.field-help-icon {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: var(--space-1);
+  color: var(--fg-tertiary);
+  cursor: help;
+}
+.field-help-icon:hover,
+.field-help-icon:focus-visible { color: var(--fg-primary); }
+.field-help-icon:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.field-help-icon[data-tooltip]::before {
+  left: calc(100% + var(--space-2));
+  top: 50%;
+  max-width: 220px;
+  font-weight: 400;
+  transform: translateY(-50%) translateX(-4px);
+}
+.field-help-icon[data-tooltip]:hover::before,
+.field-help-icon[data-tooltip]:focus-visible::before {
+  transform: translateY(-50%) translateX(0);
+}
+
 .modal-field-error {
   display: none;
   margin: var(--space-1) 0 0;
