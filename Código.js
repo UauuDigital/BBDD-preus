@@ -12,7 +12,28 @@ const TEST_SPREADSHEET_ID = '1QHeig7QbKfKYbbRpEjxtV_ei7qY6wsXvuWH-cWYau68';
 // Canvia aquesta línia per moure't entre proves i producció.
 const SPREADSHEET_ID = TEST_SPREADSHEET_ID;
 
+// Correu admès per entrar a l'app. Es llegeix de les Propietats del script
+// (Configuració del projecte → Propietats del script → clau "ADMIN_EMAIL"),
+// mai del codi: així no queda versionat a git, igual que un .env. Cal
+// configurar-lo un sol cop des de l'editor d'Apps Script; vegeu README.md.
+function getAdminEmail_() {
+  return PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL');
+}
+
+function isAuthorized_() {
+  const adminEmail = getAdminEmail_();
+  const userEmail = Session.getActiveUser().getEmail();
+  return Boolean(adminEmail) && Boolean(userEmail) && userEmail.toLowerCase() === adminEmail.toLowerCase();
+}
+
 function doGet() {
+  if (!isAuthorized_()) {
+    return HtmlService.createHtmlOutput(
+      '<p style="font-family: sans-serif; padding: 2rem; color: #515856;">' +
+      'No tens autorització per accedir a aquesta aplicació.</p>'
+    ).setTitle('Accés denegat');
+  }
+
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('BBDD Preus')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');

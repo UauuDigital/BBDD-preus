@@ -116,8 +116,17 @@ desplegament nou; amb `-i` cal cridar `clasp` directament, per això cal el
 
 - No hi ha cap credencial ni clau en aquests fitxers: l'script fa servir directament els
   teus propis permisos sobre el full.
-- L'accés a la pàgina es controla amb l'opció "Qui té accés" del desplegament (Google
-  Workspace intern, o enllaç compartit manualment) — no hi ha cap altra capa
-  d'autenticació pròpia.
+- El compte propietari d'aquest script és un Gmail personal, no un Google Workspace: per
+  això el desplegament només ofereix "Solo yo" / "Qualsevol amb compte de Google" /
+  "Qualsevol" a "Qui té accés" (no hi ha opció de restringir per domini corporatiu).
+- **Restricció d'accés real**: el desplegament ha d'estar en "Qualsevol usuari amb un
+  compte de Google" (obliga a iniciar sessió), i `doGet()` a `Código.js` comprova que el
+  correu de qui hi entra (`Session.getActiveUser().getEmail()`) coincideixi amb la
+  propietat del script `ADMIN_EMAIL`. Si no coincideix, es mostra una pàgina d'accés
+  denegat en lloc de l'aplicació.
+  - **Cal configurar `ADMIN_EMAIL` un sol cop** (no es puja amb `clasp push`, és
+    l'equivalent d'un `.env` per a Apps Script): a l'editor (`npx clasp open`) →
+    icona d'engranatge **Configuració del projecte** → **Propietats del script** →
+    afegeix la propietat `ADMIN_EMAIL` amb el correu autoritzat.
 - Les credencials de `clasp login` es guarden fora d'aquest repositori (a la teva
   carpeta d'usuari), mai en fitxers versionats.
