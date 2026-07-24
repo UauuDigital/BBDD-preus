@@ -23,10 +23,10 @@
 .eyebrow {
   font-family: var(--font-ui);
   font-weight: 600;
-  font-size: var(--text-xs);
+  font-size: calc(var(--text-display) - 1px);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-tertiary);
+  color: var(--color-ink);
 }
 
 /* ---------------------------------------------------------
