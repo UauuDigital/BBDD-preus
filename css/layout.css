@@ -86,3 +86,54 @@
 @media (prefers-reduced-motion: reduce) {
   .tab-btn::after { transition: none; }
 }
+
+/* Vinyeta pròpia (no el "title" natiu del navegador), amb el mateix
+   to fosc que .btn-primary: substitueix el tooltip natiu a tots els
+   botons que en tenen (pestanyes, accions de fila, desplegables...).
+   Base compartida aquí; cada component només en fixa la posició
+   (vegeu .tab-btn[data-tooltip]::before, .icon-btn[data-tooltip]::before,
+   .multiselect-trigger[data-tooltip]::before). S'usa ::before perquè
+   ::after ja el fan servir altres components (p.ex. el subratllat de
+   la pestanya activa). */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  width: max-content;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  box-shadow: var(--shadow-sm);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration) var(--ease-out), transform var(--duration) var(--ease-out);
+}
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-tooltip]::before { transition: none; }
+}
+
+.tab-btn[data-tooltip]::before {
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+}
+.tab-btn[data-tooltip]:hover::before,
+.tab-btn[data-tooltip]:focus-visible::before {
+  transform: translateX(-50%) translateY(0);
+}

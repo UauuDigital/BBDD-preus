@@ -23,7 +23,7 @@ function buildFilterField(def) {
   if (colIndex === -1) return null;
 
   const field = buildDropdownField(
-    colIndex, def.selected.join(', '), getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header,
+    colIndex, def.selected.join(', '), getFixedOptionsForHeader(def.header) || getDistinctColumnValues(colIndex, true), true, 'tableFilter', def.header,
     FILTER_OPTION_COLORS[def.header]
   );
   field.classList.add('table-filter');
@@ -35,12 +35,19 @@ function buildFilterField(def) {
   return field;
 }
 
-function buildClearFiltersButton() {
+// visible=false l'amaga sense treure-la del flux (visibility, no
+// display), perquè els altres filtres no es reposicionin en aparèixer
+// o desaparèixer el botó.
+function buildClearFiltersButton(visible) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn btn-ghost';
   btn.textContent = 'Neteja filtres';
   btn.addEventListener('click', clearAllFilters);
+  if (!visible) {
+    btn.style.visibility = 'hidden';
+    btn.tabIndex = -1;
+  }
   return btn;
 }
 
@@ -51,8 +58,8 @@ function buildClearFiltersButton() {
 // (state.filterDia, etc.): un filtre aplicat des d'un dia del calendari
 // (vegeu goToTableFilteredByDate) es veu reflectit en canviar a la taula.
 function renderFilters() {
-  const isCalendar = state.view === 'calendar' && state.currentName === CALENDAR_SHEET_NAME;
-  const showTableFilters = !isCalendar && (state.currentName === SERVICES_SHEET_NAME || state.currentName === CALENDAR_SHEET_NAME);
+  const isCalendar = state.view === 'calendar' && isCalendarViewSheet(state.currentName);
+  const showTableFilters = !isCalendar && (state.currentName === SERVICES_SHEET_NAME || state.currentName === CALENDAR_SHEET_NAME || state.currentName === COCTEL_SHEET_NAME);
   const showCalendarFilters = isCalendar;
 
   const tableContainer = document.getElementById('tableFilters');
@@ -68,7 +75,7 @@ function renderFilters() {
       const field = buildFilterField(def);
       if (field) tableContainer.appendChild(field);
     });
-    if (hasAnyFilterSelected()) tableContainer.appendChild(buildClearFiltersButton());
+    tableContainer.appendChild(buildClearFiltersButton(hasAnyFilterSelected()));
   }
 
   const calendarContainer = document.getElementById('calendarFilters');
@@ -79,7 +86,7 @@ function renderFilters() {
       { header: 'Masia', selected: state.filterMasia, apply: function (values) { state.filterMasia = values; } }
     );
     if (masiaField) calendarContainer.appendChild(masiaField);
-    if (state.filterMasia.length) calendarContainer.appendChild(buildClearFiltersButton());
+    calendarContainer.appendChild(buildClearFiltersButton(Boolean(state.filterMasia.length)));
   }
 }
 

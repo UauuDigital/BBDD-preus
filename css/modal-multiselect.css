@@ -47,6 +47,19 @@
 }
 .multiselect-trigger.is-open .multiselect-trigger-chevron { transform: rotate(180deg); }
 .multiselect-trigger:hover { border-color: var(--color-sand-dark); }
+
+/* Vinyeta amb la llista completa de seleccionats (quan es mostra
+   "N seleccionades" en lloc del text sencer): a sota i alineada a
+   l'esquerra, ja que l'amplada del desplegable varia. */
+.multiselect-trigger[data-tooltip]::before {
+  top: calc(100% + var(--space-2));
+  left: 0;
+  transform: translateY(4px);
+}
+.multiselect-trigger[data-tooltip]:hover::before,
+.multiselect-trigger[data-tooltip]:focus-visible::before {
+  transform: translateY(0);
+}
 .multiselect-trigger:focus-visible {
   outline: none;
   border-color: var(--focus-ring);

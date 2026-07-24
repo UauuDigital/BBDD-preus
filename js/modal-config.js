@@ -27,6 +27,19 @@ const BARRA_FIELD_STEPS = [
   { title: 'Preu', headers: ['Preu', 'SiMin€', 'NoMin€'] },
 ];
 
+// "Coctel": Dia/Mes buits = "tots els dies/mesos" (mateixa lògica que
+// "Preus per dia"). Mas Vivencs no és un valor propi de Masia: es
+// mapeja a "Can Macià" des de la calculadora, no des d'aquest full.
+const COCTEL_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Masia', 'Any', 'Dia', 'Mes'], requiredHeaders: ['Masia', 'Any'] },
+  { title: 'Preu', headers: ['MinConvidats', 'PreuPersona', 'PenalitzacioPerPersona'] },
+];
+
+const COCTEL_EXTRES_FIELD_STEPS = [
+  { title: 'Informació general', headers: ['Nom Servei', 'NomCAST', 'NomENG', 'Masia', 'Any'], requiredHeaders: ['Nom Servei'] },
+  { title: 'Preu', headers: ['PreuPersona', 'MinimEuros'] },
+];
+
 function isCalendarSheet() {
   return state.currentName === CALENDAR_SHEET_NAME;
 }
@@ -35,9 +48,19 @@ function isBarraSheet() {
   return state.currentName === BARRA_SHEET_NAME;
 }
 
+function isCoctelSheet() {
+  return state.currentName === COCTEL_SHEET_NAME;
+}
+
+function isCoctelExtresSheet() {
+  return state.currentName === COCTEL_EXTRES_SHEET_NAME;
+}
+
 function getFieldSteps() {
   if (isCalendarSheet()) return CALENDAR_FIELD_STEPS;
   if (isBarraSheet()) return BARRA_FIELD_STEPS;
+  if (isCoctelSheet()) return COCTEL_FIELD_STEPS;
+  if (isCoctelExtresSheet()) return COCTEL_EXTRES_FIELD_STEPS;
   return SERVICE_FIELD_STEPS;
 }
 

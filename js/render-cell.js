@@ -22,7 +22,7 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
 
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildMultiselectField(colIndex, value, undefined, idPrefix, CELL_OPTION_COLORS[header]);
+    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {

@@ -92,7 +92,8 @@ function buildDesplegableSection(colIndex) {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'icon-btn';
-      removeBtn.title = 'Esborra aquesta opció';
+      removeBtn.dataset.tooltip = 'Esborra aquesta opció';
+      removeBtn.setAttribute('aria-label', 'Esborra aquesta opció');
       removeBtn.innerHTML = ICONS.trash;
       removeBtn.addEventListener('click', function () {
         items.splice(index, 1);

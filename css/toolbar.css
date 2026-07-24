@@ -49,17 +49,31 @@
 }
 .btn-ghost:hover { background: var(--bg-surface); }
 
+/* Vinyeta a sota i centrada, com les pestanyes (mateixa base a
+   [data-tooltip]::before): botons "+ Fila" i "Refresca". */
+.btn[data-tooltip]::before {
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+}
+.btn[data-tooltip]:hover::before,
+.btn[data-tooltip]:focus-visible::before {
+  transform: translateX(-50%) translateY(0);
+}
+
 .toolbar-spacer { flex: 1; }
 
 .table-filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-2);
+  overflow-x: auto;
+  max-width: 100%;
 }
 .table-filters[hidden] { display: none; }
 
-.table-filters .table-filter { flex: 1 1 140px; max-width: 200px; }
+.table-filters .table-filter { flex: 0 0 140px; }
 
 .simplify-toggle {
   display: inline-flex;

@@ -11,6 +11,11 @@ const MONTH_NAMES_CA = [
 ];
 const WEEKDAY_HEADER_NAMES_CA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
 
+// Llista fixa dels 7 dies (com MASIA_OPTIONS per a Masia): opcions dels
+// desplegables de la columna "Dia" a tots els fulls, en lloc de derivar-
+// les només dels valors que ja existeixen en aquell full concret.
+const WEEKDAY_OPTIONS_CA = ['Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte', 'Diumenge'];
+
 // Alguns dies de la setmana en català varien en singular/plural (les
 // columnes fan servir totes dues formes indistintament: "Dissabte" i
 // "Dissabtes"). 0 = diumenge, igual que Date#getDay().
@@ -78,15 +83,16 @@ function isExceptedDate(exceptionText, cellDate) {
 }
 
 function getCalendarColIndexes() {
+  const priceCols = CALENDAR_COLUMNS_BY_SHEET[state.currentName] || {};
   return {
     dia: state.headers.indexOf('Dia'),
     mes: state.headers.indexOf('Mes'),
     excepte: state.headers.indexOf('Excepte'),
     masia: state.headers.indexOf('Masia'),
     any: state.headers.indexOf('Any'),
-    min: state.headers.indexOf('MÍN'),
-    preuP: state.headers.indexOf('PREU/P'),
-    preuComp: state.headers.indexOf('PreuComp'),
+    min: state.headers.indexOf(priceCols.min || 'MÍN'),
+    preuP: state.headers.indexOf(priceCols.preuP || 'PREU/P'),
+    preuComp: priceCols.preuComp ? state.headers.indexOf(priceCols.preuComp) : -1,
   };
 }
 

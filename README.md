@@ -62,9 +62,9 @@ per a Apps Script) — sense copiar i enganxar codi manualment.
 4. Activa l'API d'Apps Script (només un cop; és un interruptor personal, no un projecte
    de Google Cloud): visita https://script.google.com/home/usersettings i activa'l.
    Espera un minut perquè es propagui.
-5. Puja el codi d'aquest repositori (`Código.js` + `Index.html`) al projecte:
+5. Genera `Index.html` i puja'l al projecte, junt amb `Código.js`:
    ```bash
-   npx clasp push
+   npm run push
    ```
 6. **Desplega'l com a aplicació web** (això només cal fer-ho un cop, o quan canviïs les
    opcions d'accés — no cada vegada que editis codi):
@@ -77,14 +77,24 @@ per a Apps Script) — sense copiar i enganxar codi manualment.
 
 ## Flux de treball diari
 
-Edita `Código.js` o `Index.html` a VSCode com qualsevol altre projecte, i quan vulguis
-provar els canvis:
+Edita `Código.js` per al backend. Per al frontend, **edita els fitxers font**
+(`components/`, `css/`, `js/`, `Index.template.html`) — mai `Index.html` directament,
+és un fitxer generat (vegeu més amunt). Quan vulguis provar els canvis:
 
 ```bash
-npx clasp push
+npm run push
 ```
 
-(o `npx clasp push --watch` per pujar automàticament cada cop que desis un fitxer).
+(equivalent a `npm run build` + `clasp push`: regenera `Index.html` a partir dels
+fitxers font i el puja). Per repetir-ho automàticament cada cop que desis un fitxer:
+
+```bash
+npm run watch
+```
+
+Si mai edites `Index.html` a mà per error, cal tornar a sincronitzar els fitxers font
+abans de tornar a fer `npm run build` (si no, es perdria el canvi fet a mà en
+sobreescriure `Index.html`).
 
 Els canvis es veuen a l'instant a la **URL de prova** (`npx clasp open` → Desplega →
 Implementacions de prova). Per publicar-los a la URL definitiva que fa servir l'equip
@@ -92,8 +102,13 @@ Implementacions de prova). Per publicar-los a la URL definitiva que fa servir l'
 l'ID:
 
 ```bash
+npm run build
 npx clasp deploy -i AKfycbwuviZsKCprgfdKt8b_eaBm3P5WOEgI2ZPxIbifeD18EzGzRSemi7rRAuieQkqnowaI2A
 ```
+
+(`npm run deploy` sense `-i` fa `npm run build` automàticament però crea sempre un
+desplegament nou; amb `-i` cal cridar `clasp` directament, per això cal el
+`npm run build` explícit abans.)
 
 (Aquest ID es pot tornar a consultar amb `npx clasp deployments`.)
 

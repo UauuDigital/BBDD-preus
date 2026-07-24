@@ -126,7 +126,7 @@ function renderTable() {
     const dup = document.createElement('button');
     dup.type = 'button';
     dup.className = 'icon-btn';
-    dup.title = 'Duplica fila';
+    dup.dataset.tooltip = 'Duplica fila';
     dup.setAttribute('aria-label', 'Duplica la fila ' + (rowIndex + 1));
     dup.innerHTML = ICONS.duplicate;
     dup.addEventListener('click', function () { handleDuplicateRow(rowIndex); });
@@ -134,7 +134,7 @@ function renderTable() {
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'icon-btn';
-    del.title = 'Esborra fila';
+    del.dataset.tooltip = 'Esborra fila';
     del.setAttribute('aria-label', 'Esborra la fila ' + (rowIndex + 1));
     del.innerHTML = ICONS.trash;
     del.addEventListener('click', function () { handleDeleteRow(rowIndex); });

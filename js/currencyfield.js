@@ -1,5 +1,5 @@
 // Capçaleres de moneda: es mostren com a camp numèric amb sufix "€".
-const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X', 'PREU/P', 'PreuComp'];
+const CURRENCY_HEADERS = ['Preu', 'Llindà preu X<0', 'Llindà preu 0<X', 'PREU/P', 'PreuComp', 'PreuPersona', 'PenalitzacioPerPersona', 'MinimEuros'];
 
 // Un <input type="number"> rebutja en silenci qualsevol valor que no
 // sigui un número pur: una cel·la ja existent ve formatada pel Sheet

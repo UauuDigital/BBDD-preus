@@ -10,7 +10,7 @@ function renderTabs() {
     btn.className = 'tab-btn' + (sheet.name === state.currentName ? ' active' : '');
     btn.type = 'button';
     btn.textContent = info ? info.label : sheet.name;
-    btn.title = info ? sheet.name : '';
+    if (info && info.hint) btn.dataset.tooltip = info.hint;
     btn.setAttribute('aria-selected', sheet.name === state.currentName ? 'true' : 'false');
     btn.addEventListener('click', function () {
       if (sheet.name === state.currentName) return;
@@ -23,8 +23,18 @@ function renderTabs() {
       state.sortDirection = 'asc';
       state.view = 'table';
       renderTabs();
-      renderSkeleton(state.headers.length || 3, 5);
-      loadCurrentSheet();
+      const cached = state.sheetCache[sheet.name];
+      if (cached) {
+        // Ja la tenim: es mostra a l'instant i es refresca en segon pla
+        // per si el full de càlcul ha canviat mentrestant.
+        applySheetData(cached);
+        renderCurrentView();
+        setStatus(state.rows.length + ' files carregades.', 'success');
+        loadCurrentSheet(true);
+      } else {
+        renderSkeleton(state.headers.length || 3, 5);
+        loadCurrentSheet();
+      }
     });
     nav.appendChild(btn);
   });
@@ -36,13 +46,14 @@ function renderTabs() {
   renderViewToggle();
 }
 
-// Commutador Taula/Calendari: només al full "Preus per dia". No depèn
-// de les dades (a diferència dels filtres), es pot construir tan bon
-// punt se sap quin full s'ha seleccionat.
+// Commutador Taula/Calendari: només als fulls de CALENDAR_VIEW_SHEETS
+// ("Preus menu" i "Còctel"). No depèn de les dades (a diferència dels
+// filtres), es pot construir tan bon punt se sap quin full s'ha
+// seleccionat.
 function renderViewToggle() {
   const container = document.getElementById('viewToggle');
   container.innerHTML = '';
-  container.hidden = state.currentName !== CALENDAR_SHEET_NAME;
+  container.hidden = !isCalendarViewSheet(state.currentName);
   if (container.hidden) return;
 
   [
@@ -64,11 +75,11 @@ function renderViewToggle() {
   });
 }
 
-// Mostra la taula o el calendari segons state.view (només rellevant al
-// full "Preus per dia" — a la resta sempre és la taula), i el joc de
-// filtres corresponent (vegeu renderFilters a render-filters.js).
+// Mostra la taula o el calendari segons state.view (només rellevant als
+// fulls de CALENDAR_VIEW_SHEETS — a la resta sempre és la taula), i el
+// joc de filtres corresponent (vegeu renderFilters a render-filters.js).
 function renderCurrentView() {
-  const isCalendar = state.view === 'calendar' && state.currentName === CALENDAR_SHEET_NAME;
+  const isCalendar = state.view === 'calendar' && isCalendarViewSheet(state.currentName);
   document.getElementById('tableWrap').hidden = isCalendar;
   document.getElementById('calendarView').hidden = !isCalendar;
   renderFilters();

@@ -58,14 +58,18 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
   trigger.appendChild(triggerChevron);
 
   // En multiselecció, amb 3+ seleccions es mostra un recompte
-  // ("3 seleccionades") en lloc de la llista sencera; el títol
-  // (tooltip) sempre té la llista completa.
+  // ("3 seleccionades") en lloc de la llista sencera; la vinyeta només
+  // hi surt en aquest cas (quan el text visible és un resum, no el
+  // valor sencer) — en uniselecció (Any, Unit, Excepte...) o amb 1-2
+  // seleccions ja es veu tot el text, no cal repetir-lo en una vinyeta.
   const emptyLabel = placeholderText || 'Selecciona...';
   function setTriggerLabel(list) {
+    const isTruncated = multi && list.length > 2;
     triggerLabel.textContent = !list.length
       ? (options.length ? emptyLabel : 'Encara no hi ha valors per triar')
-      : (!multi || list.length <= 2 ? list.join(', ') : list.length + ' seleccionades');
-    trigger.title = list.join(', ');
+      : (!isTruncated ? list.join(', ') : list.length + ' seleccionades');
+    if (isTruncated) trigger.dataset.tooltip = list.join(', ');
+    else delete trigger.dataset.tooltip;
 
     triggerDots.innerHTML = '';
     if (getOptionColor) {
@@ -146,9 +150,23 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
     panel.appendChild(optionLabel);
   });
 
+  // Si no hi ha prou espai a sota (files properes al final de la
+  // taula/finestra), el panell s'obre cap amunt en lloc de quedar
+  // tallat per la vora de la pantalla.
   function repositionPanel() {
     const rect = trigger.getBoundingClientRect();
-    panel.style.top = (rect.bottom + 4) + 'px';
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const openUpward = spaceBelow < 150 && spaceAbove > spaceBelow;
+
+    panel.style.maxHeight = Math.max(100, Math.min(200, openUpward ? spaceAbove : spaceBelow)) + 'px';
+    if (openUpward) {
+      panel.style.top = '';
+      panel.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    } else {
+      panel.style.bottom = '';
+      panel.style.top = (rect.bottom + 4) + 'px';
+    }
     panel.style.left = rect.left + 'px';
     panel.style.width = rect.width + 'px';
   }
@@ -162,16 +180,23 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
     // detecta tant el scroll de la finestra com el d'un contenidor
     // intern amb overflow (.modal-fields, .table-wrap...) sense haver
     // de conèixer quin és — funciona igual dins el modal que a la
-    // barra d'eines de la taula.
-    window.addEventListener('scroll', closePanel, { passive: true, capture: true });
+    // barra d'eines de la taula. Però el propi scroll intern del panell
+    // (quan hi ha moltes opcions) també arriba per aquí en fase de
+    // captura, així que cal ignorar-lo o mai es podria fer scroll dins.
+    window.addEventListener('scroll', handleOutsideScroll, { passive: true, capture: true });
     window.addEventListener('resize', closePanel);
+  }
+
+  function handleOutsideScroll(event) {
+    if (panel.contains(event.target)) return;
+    closePanel();
   }
 
   function closePanel() {
     panel.hidden = true;
     trigger.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
-    window.removeEventListener('scroll', closePanel, { capture: true });
+    window.removeEventListener('scroll', handleOutsideScroll, { capture: true });
     window.removeEventListener('resize', closePanel);
   }
   panel._closeMultiselect = closePanel;

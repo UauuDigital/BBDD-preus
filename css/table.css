@@ -64,6 +64,7 @@ thead th {
 .header-cell-sort-icon.is-asc { transform: rotate(180deg); }
 
 .icon-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,6 +85,19 @@ tr:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
 .icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+/* Vinyeta a la dreta del botó (no a sota, com les pestanyes) perquè no
+   quedi tallada pel scroll vertical de .table-wrap. */
+.icon-btn[data-tooltip]::before {
+  left: calc(100% + var(--space-2));
+  top: 50%;
+  max-width: 200px;
+  transform: translateY(-50%) translateX(-4px);
+}
+.icon-btn[data-tooltip]:hover::before,
+.icon-btn[data-tooltip]:focus-visible::before {
+  transform: translateY(-50%) translateX(0);
+}
 
 /* 26px és massa petit per a un dit (mínim recomanat 44px): només
    s'agranda en dispositius sense precisió de ratolí, per no fer

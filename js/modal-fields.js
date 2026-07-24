@@ -3,13 +3,14 @@
 // condicional "Altres Extres" (pas de desglossament).
 // Capçaleres numèriques senzilles (sense format de moneda): un
 // <input type="number"> pla.
-const NUMBER_HEADERS = ['MÍN'];
+const NUMBER_HEADERS = ['MÍN', 'MinConvidats'];
 
 function buildFieldControl(colIndex, label, isId) {
   const initialValue = modalValues[colIndex];
 
   if (MULTISELECT_HEADERS.indexOf(label) !== -1) {
-    return buildMultiselectField(colIndex, initialValue, undefined, undefined, (label === 'Masia' || label === 'Masies') ? getMasiaColor : undefined);
+    const isMasiaHeader = label === 'Masia' || label === 'Masies';
+    return buildMultiselectField(colIndex, initialValue, getFixedOptionsForHeader(label) || undefined, undefined, isMasiaHeader ? getMasiaColor : undefined);
   }
   if (label === YEAR_HEADER) return buildYearField(colIndex, initialValue, undefined, getYearRelativeColor);
   if (SELECT_HEADERS.indexOf(label) !== -1) return buildSelectField(colIndex, initialValue);

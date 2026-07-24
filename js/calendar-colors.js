@@ -9,6 +9,22 @@ const MASIA_COLOR_RULES = [
   { match: 'Vivencs', color: 'var(--masia-vivencs)' },
 ];
 
+// Llista fixa de les 4 masies: es fa servir com a opcions de tots els
+// desplegables "Masia"/"Masies" (filtres, taula i formulari "+ Fila"),
+// en lloc de derivar-les només dels valors que ja existeixen en aquell
+// full concret — així un full nou o amb poques files ja les mostra totes.
+const MASIA_OPTIONS = ["Ca n'Alzina", 'Castell de Tous', 'Can Macià', 'Mas Vivencs'];
+
+// Retorna la llista fixa d'opcions per a les capçaleres que en tenen
+// una (Masia/Masies, Dia, Mes), o null si la capçalera no en té —
+// en aquest cas cal seguir derivant-les dels valors ja presents al full.
+function getFixedOptionsForHeader(header) {
+  if (header === 'Masia' || header === 'Masies') return MASIA_OPTIONS;
+  if (header === 'Dia') return WEEKDAY_OPTIONS_CA;
+  if (header === 'Mes') return MONTH_NAMES_CA;
+  return null;
+}
+
 function getMasiaColor(masiaName) {
   const rule = MASIA_COLOR_RULES.find(function (r) { return masiaName && masiaName.indexOf(r.match) !== -1; });
   return rule ? rule.color : 'var(--masia-default)';

@@ -14,18 +14,30 @@ function onMetaLoaded(sheets) {
   loadCurrentSheet();
 }
 
-function loadCurrentSheet() {
-  setStatus('Carregant...', 'loading');
-  google.script.run.withSuccessHandler(onSheetLoaded).withFailureHandler(onError).getSheetData(state.currentName);
+function loadCurrentSheet(silent) {
+  const requestedName = state.currentName;
+  if (!silent) setStatus('Carregant...', 'loading');
+  google.script.run
+    .withSuccessHandler(function (data) { onSheetLoaded(data, requestedName, silent); })
+    .withFailureHandler(silent ? function () {} : onError)
+    .getSheetData(requestedName);
 }
 
-function onSheetLoaded(data) {
+function applySheetData(data) {
   state.headers = data.headers || [];
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
+}
+
+function onSheetLoaded(data, requestedName, silent) {
+  state.sheetCache[requestedName] = data;
+  // Descarta la resposta si l'usuari ja ha canviat a una altra pestanya
+  // mentre esperàvem el servidor (rellevant sobretot en refrescos silenciosos).
+  if (requestedName !== state.currentName) return;
+  applySheetData(data);
   renderCurrentView();
-  setStatus(state.rows.length + ' files carregades.', 'success');
+  if (!silent) setStatus(state.rows.length + ' files carregades.', 'success');
 }
 
 function handleAddRow() {

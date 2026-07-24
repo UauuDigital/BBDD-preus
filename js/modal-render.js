@@ -70,7 +70,7 @@ function renderModalStep() {
         });
       }
     });
-  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet() && !isBarraSheet()) {
+  } else if (modalStepIndex === STEP_OPTIONS && !isCalendarSheet() && !isBarraSheet() && !isCoctelSheet() && !isCoctelExtresSheet()) {
     const grid = document.createElement('div');
     grid.className = 'option-card-grid';
     getStepColIndexes(getFieldSteps()[STEP_OPTIONS]).forEach(function (colIndex) {

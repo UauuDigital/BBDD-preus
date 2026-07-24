@@ -20,15 +20,35 @@ function isDataHeader(header) {
    el seu nom tal qual, sense hint. */
 const SHEET_INFO = {
   'Hoja 1': { label: 'Serveis', hint: 'Serveis addicionals (DJ, menús, fotografia...): preu i a quines finques i anys s\'apliquen.' },
-  'PreusMenu': { label: 'Preus per dia', hint: 'Preu per persona segons finca, any, dia de la setmana i mes.' },
+  'PreusMenu': { label: 'Preus menu', hint: 'Preu per persona segons finca, any, dia de la setmana i mes.' },
   'BarraLliure': { label: 'Barra lliure', hint: 'Tarifes de barra lliure per finca i any.' },
+  'Coctel': { label: 'Còctel', hint: 'Preu per persona i mínim de convidats segons masia, any, dia de la setmana i mes. Mas Vivencs comparteix taula amb Can Macià.' },
+  'CoctelExtres': { label: 'Extres Còctel', hint: 'Extres propis del format Còctel (menú infantil, aperitiu al jardí...): preu i masia/any als quals s\'apliquen.' },
 };
 
 // Fulls on s'ofereixen filtres (vegeu renderFilters a render.js): els
-// noms tècnics de "Serveis" i "Preus per dia".
+// noms tècnics de "Serveis", "Preus per dia" i "Còctel".
 const SERVICES_SHEET_NAME = 'Hoja 1';
 const CALENDAR_SHEET_NAME = 'PreusMenu';
 const BARRA_SHEET_NAME = 'BarraLliure';
+const COCTEL_SHEET_NAME = 'Coctel';
+const COCTEL_EXTRES_SHEET_NAME = 'CoctelExtres';
+
+// Fulls amb vista de calendari (commutador Taula/Calendari): mateixa
+// lògica per a tots (any → mes → dia), però cadascun amb les seves
+// pròpies columnes de "mínim"/"preu" (vegeu CALENDAR_COLUMNS_BY_SHEET).
+const CALENDAR_VIEW_SHEETS = [CALENDAR_SHEET_NAME, COCTEL_SHEET_NAME];
+function isCalendarViewSheet(sheetName) {
+  return CALENDAR_VIEW_SHEETS.indexOf(sheetName) !== -1;
+}
+
+// Noms de columna que la vista de calendari fa servir per mostrar el
+// mínim de convidats i el preu, diferents a cada full de calendari.
+// preuComp (preu compensat) només existeix a "Preus menu".
+const CALENDAR_COLUMNS_BY_SHEET = {
+  'PreusMenu': { min: 'MÍN', preuP: 'PREU/P', preuComp: 'PreuComp' },
+  'Coctel': { min: 'MinConvidats', preuP: 'PreuPersona', preuComp: null },
+};
 
 // Columnes que es veuen a la taula de cada full quan la casella
 // "Simplifica" està activada (per defecte ho està). Els fulls que no
@@ -36,6 +56,8 @@ const BARRA_SHEET_NAME = 'BarraLliure';
 const SIMPLIFY_TABLE_COLUMNS_BY_SHEET = {
   'PreusMenu': ['DATA', 'MÍN', 'PREU/P', 'Masia', 'Any'],
   'Hoja 1': ['Nom Servei', 'Masia', 'Any', 'Preu'],
+  'Coctel': ['Masia', 'Any', 'Dia', 'Mes', 'MinConvidats', 'PreuPersona', 'PenalitzacioPerPersona'],
+  'CoctelExtres': ['Nom Servei', 'Masia', 'Any', 'PreuPersona'],
 };
 function isSimplifiableSheet(sheetName) {
   return Object.prototype.hasOwnProperty.call(SIMPLIFY_TABLE_COLUMNS_BY_SHEET, sheetName);
@@ -52,6 +74,10 @@ const COLUMN_WIDTH_CLASSES = {
   'MÍN': 'col-narrow',
   'PREU/P': 'col-narrow',
   'Any': 'col-narrow',
+  'MinConvidats': 'col-narrow',
+  'PreuPersona': 'col-narrow',
+  'PenalitzacioPerPersona': 'col-narrow',
+  'MinimEuros': 'col-narrow',
 };
 function columnClassFor(header) {
   return COLUMN_WIDTH_CLASSES[header] || null;
@@ -76,6 +102,9 @@ const state = {
   calendarLevel: 'years',
   calendarYear: null,
   calendarRefDate: new Date(),
+  // Cau de dades ja carregades per full (nom -> {headers, rows}), perquè
+  // canviar de pestanya no obligui a tornar a demanar-les al servidor.
+  sheetCache: {},
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
