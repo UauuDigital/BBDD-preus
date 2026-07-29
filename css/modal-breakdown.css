@@ -48,6 +48,198 @@
   color: var(--fg-secondary);
 }
 
+/* El control de doble cursor és un <fieldset>/<legend> (no un <div>/
+   <label>, com la resta de camps): els dos <input type="range"> no
+   tenen un únic control al qual associar un <label for>. Cal resetejar
+   l'estil natiu del navegador i replicar el de ".modal-field label". */
+.modal-field.range-dual-field {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.modal-field.range-dual-field legend {
+  display: block;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-secondary);
+  margin-bottom: var(--space-2);
+}
+
+/* Slider de doble cursor (Llindà Principi/Final): dos <input
+   type="range"> superposats sobre la mateixa pista visual, amb
+   pointer-events només al "thumb" de cadascun (l'única manera d'un
+   control de rang doble sense llibreries externes). */
+.range-dual {
+  position: relative;
+  height: 32px;
+  /* Marge superior perquè hi càpiga la bombolla de valor sense
+     quedar tallada per sobre del control. */
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+}
+.range-dual-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-divider);
+  transform: translateY(-50%);
+}
+.range-dual-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-charcoal);
+  transform: translateY(-50%);
+}
+/* Especificitat ".range-dual .range-dual-input" (no només
+   ".range-dual-input"): cal guanyar per sobre de ".modal-field input"
+   (modal.css), que altrament hi posa vora i fons sòlids i tapa la
+   pista, el farciment i el cursor de sota. */
+.range-dual .range-dual-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 32px;
+  border: none;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-appearance: none;
+  pointer-events: none;
+}
+.range-dual .range-dual-input:focus { box-shadow: none; }
+.range-dual-input::-webkit-slider-runnable-track { background: transparent; }
+.range-dual-input::-moz-range-track { background: transparent; border: none; }
+.range-dual-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-charcoal);
+  border: 2px solid var(--bg-page);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  margin-top: 0;
+}
+.range-dual-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-charcoal);
+  border: 2px solid var(--bg-page);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.range-dual-input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.range-dual-input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* 16px és massa petit per a un dit (mínim WCAG 2.5.8: 24px): en tàctil
+   es puja a 28px, igual que ja fa .icon-btn a table.css. La constant
+   THUMB_WIDTH del JS (llindasection.js) coneix aquest mateix valor,
+   perquè bombolla/farciment quedin igual d'alineats amb el cursor real. */
+@media (pointer: coarse) {
+  .range-dual-input::-webkit-slider-thumb { width: 28px; height: 28px; }
+  .range-dual-input::-moz-range-thumb { width: 28px; height: 28px; }
+}
+
+/* Valor de cada cursor, flotant just a sobre seu (left ajustat des de
+   JS a cada moviment), no un text fix sota el slider. */
+.range-dual-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  transform: translate(-50%, -8px);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.range-dual-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--color-ink);
+}
+
+/* Un input numèric per cadascun dels 3 trams que dibuixen els cursors
+   a la pista (0→Principi, Principi→Final, Final→500). Flexbox (no
+   posicionament absolut amb left/width calculats): reparteix l'espai
+   entre els tres proporcionalment a l'amplada real de cada tram
+   (flex-grow, fixat des de JS), però sense deixar mai que cap caigui
+   per sota del min-width ni surti per fora del contenidor — un tram
+   molt estret (p.ex. amb els valors per defecte d'una fila nova,
+   Principi=0/Final=500) simplement pren el mínim i la resta de trams
+   cedeixen l'espai que els sobra.
+   */
+.range-dual-zones {
+  display: flex;
+  height: 32px;
+  margin-top: var(--space-2);
+  gap: 2px;
+}
+
+/* Cadascun és un camp de moneda (€) en miniatura: el flex-grow (fixat
+   des de JS) es fixa aquí, al contenidor, no a l'input directament. */
+.range-dual-zones .range-dual-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 32px;
+}
+.range-dual-zone-suffix {
+  font-size: var(--text-xs);
+  color: var(--fg-tertiary);
+  flex-shrink: 0;
+}
+
+.range-dual-zones .range-dual-zone-input {
+  min-width: 0;
+  text-align: center;
+  /* ".modal-field input" (modal.css) hi posa 8px/12px de padding: amb
+     box-sizing: border-box (variables.css), aquest padding sol ja
+     consumeix més espai que el min-width calculat en "ch" i no en
+     queda gens per al dígit. Cal força menys padding aquí. */
+  padding: 2px 4px;
+  /* Les fletxes natives de pujar/baixar es mengen bona part dels 32px
+     mínims, deixant massa poc espai per al propi número. */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.range-dual-zones .range-dual-zone-input::-webkit-inner-spin-button,
+.range-dual-zones .range-dual-zone-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .desplegable-table {
   width: 100%;
   border-collapse: collapse;
