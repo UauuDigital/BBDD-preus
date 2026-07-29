@@ -91,7 +91,7 @@ function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
     })
     .withFailureHandler(function (err) {
       if (onRevert) onRevert();
-      onError(err);
+      onError(err, function () { saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess); });
     })
     .updateCell(state.currentName, rowIndex, colIndex, newValue);
 }

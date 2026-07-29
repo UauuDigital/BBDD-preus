@@ -117,8 +117,8 @@ function isLastStep() {
 
 function updateProgressBar() {
   const plannedSteps = Math.max(getPlannedStepCount(), modalStepIndex + 1);
-  document.getElementById('addRowProgressFill').style.width =
-    Math.round(((modalStepIndex + 1) / plannedSteps) * 100) + '%';
+  document.getElementById('addRowProgressFill').style.transform =
+    'scaleX(' + ((modalStepIndex + 1) / plannedSteps) + ')';
 }
 
 function updateModalNavButtons() {

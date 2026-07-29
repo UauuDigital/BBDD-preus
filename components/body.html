@@ -21,6 +21,14 @@
     <button id="refreshBtn" class="btn btn-ghost" type="button" aria-label="Refresca" data-tooltip="Torna a carregar les dades del full"></button>
   </div>
 
+  <div id="bulkActionsBar" class="bulk-actions-bar" hidden role="status" aria-live="polite">
+    <span id="bulkActionsCount" class="bulk-actions-count"></span>
+    <button type="button" id="bulkClearBtn" class="btn btn-ghost">Deselecciona</button>
+    <span class="toolbar-spacer"></span>
+    <button type="button" id="bulkDuplicateBtn" class="btn btn-ghost">Duplica</button>
+    <button type="button" id="bulkDeleteBtn" class="btn btn-danger">Esborra</button>
+  </div>
+
   <div id="tableWrap" class="table-wrap">
     <table id="dataTable"></table>
   </div>
@@ -46,4 +54,18 @@
       <button type="submit" id="addRowSubmitBtn" class="btn btn-primary" hidden>Crea la fila</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="confirmDialog" class="modal modal-confirm">
+  <div class="modal-header">
+    <h2 class="modal-title">Segur?</h2>
+  </div>
+  <div class="modal-fields">
+    <p id="confirmMessage" class="confirm-message"></p>
+  </div>
+  <div class="modal-actions">
+    <button type="button" id="confirmCancelBtn" class="btn btn-ghost">Cancel·la</button>
+    <span class="modal-actions-spacer"></span>
+    <button type="button" id="confirmOkBtn" class="btn btn-danger">Esborra</button>
+  </div>
 </dialog>

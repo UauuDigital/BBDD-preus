@@ -7,6 +7,11 @@
   padding: 0;
   width: min(480px, calc(100vw - var(--space-6) * 2));
   box-shadow: 0 12px 32px rgba(28, 28, 26, 0.18);
+  /* transition de "width" (no transform) a consciència: en passar a
+     .modal-wide el contingut es reorganitza en més columnes (vegeu
+     modal-breakdown.css), un canvi real de layout que un scaleX()
+     distorsionaria en lloc de refluir correctament. Únic ús, no és una
+     animació contínua, així que el cost de layout és negligible. */
   transition: width var(--duration) var(--ease-out);
 }
 
@@ -52,9 +57,13 @@
 
 .modal-progress-fill {
   height: 100%;
+  width: 100%;
+  transform-origin: left;
   background: var(--color-charcoal);
   border-radius: var(--radius-pill);
-  transition: width 220ms var(--ease-out);
+  /* transform en lloc de width: no força recàlcul de layout a cada
+     canvi de pas (només compositor), detectat pel linter d'Impeccable. */
+  transition: transform 220ms var(--ease-out);
 }
 
 .modal-fields {
@@ -167,3 +176,10 @@
 }
 
 .modal-actions-spacer { flex: 1; }
+
+/* Confirmació d'accions destructives (esborrar fila): substitueix el
+   confirm() natiu del navegador, que no es pot estilitzar, bloqueja el
+   fil i no dona context de la fila afectada. Reutilitza .modal però
+   més estret, ja que només mostra un missatge curt. */
+.modal-confirm { width: min(400px, calc(100vw - var(--space-6) * 2)); }
+.confirm-message { margin: 0; color: var(--fg-primary); }

@@ -105,6 +105,11 @@ const state = {
   // Cau de dades ja carregades per full (nom -> {headers, rows}), perquè
   // canviar de pestanya no obligui a tornar a demanar-les al servidor.
   sheetCache: {},
+  // Files marcades per a una acció en bloc (duplicar/esborrar diverses
+  // alhora). Es referencien per rowIndex, així que es buiden sempre que
+  // es torna a carregar el full (vegeu applySheetData a actions.js):
+  // un rowIndex vell ja no correspondria a la mateixa fila.
+  selectedRows: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
@@ -162,14 +167,40 @@ function padRow(row, width) {
   return copy;
 }
 
-function setStatus(message, type) {
+function setStatus(message, type, retry) {
   const el = document.getElementById('statusMsg');
   el.className = 'status' + (type ? ' is-' + type : '');
   el.innerHTML = (type === 'loading' || type === 'success' || type === 'error')
     ? '<span class="status-dot"></span><span>' + message + '</span>'
     : '<span>' + message + '</span>';
+  if (type === 'error' && retry) {
+    const retryBtn = document.createElement('button');
+    retryBtn.type = 'button';
+    retryBtn.className = 'btn btn-ghost status-retry';
+    retryBtn.textContent = 'Torna-ho a provar';
+    retryBtn.addEventListener('click', retry);
+    el.appendChild(retryBtn);
+  }
 }
 
-function onError(err) {
-  setStatus(err && err.message ? err.message : String(err), 'error');
+// Missatges que el propi backend ja llança en català pla (vegeu
+// Código.js, p.ex. getSheetOrThrow_) es mostren tal qual: ja són
+// entenedors i accionables. Qualsevol altra cosa (excepcions de
+// sistema d'Apps Script, talls de xarxa, quotes...) sol arribar en
+// anglès i amb detalls tècnics que no ajuden l'usuari, així que es
+// substitueix per un missatge genèric però clar; l'error real només
+// es registra a la consola per a depuració.
+const TECHNICAL_ERROR_RE = /^(Exception|TypeError|ReferenceError|ScriptError|Error:|Service invoked too many times|Address unavailable|Timeout|Network error)/i;
+
+// progressNote: per a operacions en bloc (duplicar/esborrar diverses
+// files), quantes ja s'havien completat abans que fallés la resta —
+// si no, sembla que no s'ha fet res quan en realitat una part sí.
+function onError(err, retry, progressNote) {
+  const rawMessage = err && err.message ? err.message : String(err);
+  const isTechnical = !rawMessage || TECHNICAL_ERROR_RE.test(rawMessage) || /\n/.test(rawMessage);
+  if (isTechnical) console.error('Error tècnic:', err);
+  const message = isTechnical
+    ? 'No s\'ha pogut completar l\'acció. Comprova la connexió i torna-ho a provar.'
+    : rawMessage;
+  setStatus(message + (progressNote ? ' (' + progressNote + ')' : ''), 'error', retry);
 }

@@ -32,6 +32,11 @@ function renderTable() {
 
   const thActions = document.createElement('th');
   thActions.className = 'row-actions-col';
+  const selectAll = document.createElement('input');
+  selectAll.type = 'checkbox';
+  selectAll.className = 'row-select-checkbox';
+  selectAll.setAttribute('aria-label', 'Selecciona totes les files visibles');
+  thActions.appendChild(selectAll);
   headRow.appendChild(thActions);
 
   visibleColIndexes.forEach(function (colIndex) {
@@ -67,7 +72,20 @@ function renderTable() {
       renderTable();
     });
 
-    th.appendChild(wrap);
+    const headerRow = document.createElement('div');
+    headerRow.className = 'header-cell-row';
+    headerRow.appendChild(wrap);
+
+    // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
+    // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a la
+    // pròpia capçalera de la taula: les columnes abreujades (MÍN,
+    // PREU/P...) no haurien d'obligar a obrir el modal per entendre-les.
+    // Germana del botó d'ordenació, no filla: un <button> no pot
+    // contenir cap altre element interactiu.
+    const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
+    if (helpIcon) headerRow.appendChild(helpIcon);
+
+    th.appendChild(headerRow);
     headRow.appendChild(th);
   });
 
@@ -98,6 +116,22 @@ function renderTable() {
     visible.sort(function (a, b) { return compareForSort(a.row[sortColIndex], b.row[sortColIndex]) * dir; });
   }
 
+  // Neteja de la selecció d'índexs que ja no són visibles (filtrats o
+  // ordenats fora), perquè "Esborra"/"Duplica" en bloc no actuïn mai
+  // sobre una fila que l'usuari ja no veu marcada.
+  const visibleRowIndexes = visible.map(function (item) { return item.rowIndex; });
+  Array.from(state.selectedRows).forEach(function (rowIndex) {
+    if (visibleRowIndexes.indexOf(rowIndex) === -1) state.selectedRows.delete(rowIndex);
+  });
+
+  selectAll.checked = Boolean(visibleRowIndexes.length) && visibleRowIndexes.every(function (rowIndex) { return state.selectedRows.has(rowIndex); });
+  selectAll.indeterminate = !selectAll.checked && visibleRowIndexes.some(function (rowIndex) { return state.selectedRows.has(rowIndex); });
+  selectAll.addEventListener('change', function () {
+    if (selectAll.checked) visibleRowIndexes.forEach(function (rowIndex) { state.selectedRows.add(rowIndex); });
+    else visibleRowIndexes.forEach(function (rowIndex) { state.selectedRows.delete(rowIndex); });
+    renderTable();
+  });
+
   if (!state.rows.length) {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
@@ -123,6 +157,16 @@ function renderTable() {
 
     const tdActions = document.createElement('td');
     tdActions.className = 'row-actions-col';
+    const rowSelect = document.createElement('input');
+    rowSelect.type = 'checkbox';
+    rowSelect.className = 'row-select-checkbox';
+    rowSelect.checked = state.selectedRows.has(rowIndex);
+    rowSelect.setAttribute('aria-label', 'Selecciona la fila ' + (rowIndex + 1));
+    rowSelect.addEventListener('change', function () {
+      if (rowSelect.checked) state.selectedRows.add(rowIndex); else state.selectedRows.delete(rowIndex);
+      renderTable();
+    });
+    tdActions.appendChild(rowSelect);
     const dup = document.createElement('button');
     dup.type = 'button';
     dup.className = 'icon-btn';
@@ -157,4 +201,23 @@ function renderTable() {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
+  renderBulkActionsBar();
+}
+
+// Barra que apareix sobre la taula quan hi ha files marcades amb la
+// casella de selecció, amb les accions en bloc (duplicar/esborrar).
+function renderBulkActionsBar() {
+  const bar = document.getElementById('bulkActionsBar');
+  const count = state.selectedRows.size;
+  bar.hidden = count === 0;
+  if (!count) return;
+  document.getElementById('bulkActionsCount').textContent =
+    count === 1 ? '1 fila seleccionada' : (count + ' files seleccionades');
+  const rowIndexes = Array.from(state.selectedRows);
+  document.getElementById('bulkDuplicateBtn').onclick = function () { handleBulkDuplicate(rowIndexes); };
+  document.getElementById('bulkDeleteBtn').onclick = function () { handleBulkDelete(rowIndexes); };
+  document.getElementById('bulkClearBtn').onclick = function () {
+    state.selectedRows.clear();
+    renderTable();
+  };
 }

@@ -321,6 +321,14 @@ button, input {
 }
 .btn-ghost:hover { background: var(--bg-surface); }
 
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--action-primary-fg);
+}
+.btn-danger:hover { filter: brightness(0.92); }
+.btn-danger:active { filter: brightness(0.85); }
+
 /* Vinyeta a sota i centrada, com les pestanyes (mateixa base a
    [data-tooltip]::before): botons "+ Fila" i "Refresca". */
 .btn[data-tooltip]::before {
@@ -337,11 +345,9 @@ button, input {
 
 .table-filters {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  overflow-x: auto;
-  max-width: 100%;
 }
 .table-filters[hidden] { display: none; }
 
@@ -389,6 +395,22 @@ button, input {
   outline-offset: 2px;
 }
 
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  background: var(--bg-warm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+.bulk-actions-count {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+
 .sheet-hint {
   margin: calc(var(--space-5) * -1 + var(--space-1)) 0 var(--space-4);
   font-size: var(--text-sm);
@@ -419,6 +441,14 @@ button, input {
 
 .status.is-error { color: var(--color-danger); font-weight: 500; }
 .status.is-error .status-dot::before { content: '!'; font-size: 0.8em; font-weight: 700; }
+
+.status-retry {
+  padding: 2px var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-danger);
+  text-decoration: underline;
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
@@ -453,11 +483,31 @@ thead th {
   text-align: left;
 }
 
+/* Cada th (position: sticky) crea el seu propi context d'apilament:
+   la vinyeta d'ajuda hi queda confinada encara que tingui z-index alt
+   (vegeu [data-tooltip]::before a layout.css), i la columna següent la
+   tapa en pintar-se després amb el mateix z-index. En mostrar la
+   vinyeta, cal pujar el th que la conté per sobre dels seus veïns. */
+thead th:has(.field-help-icon:hover),
+thead th:has(.field-help-icon:focus-visible) {
+  z-index: 2;
+}
+
+/* Conté el botó d'ordenació i, quan n'hi ha, la icona d'ajuda: han de
+   ser germans (no la icona dins del botó) perquè un element interactiu
+   no en contingui un altre i clicar la icona no dispari l'ordenació. */
+.header-cell-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
 .header-cell {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-3) var(--space-2);
   border: none;
   background: transparent;
@@ -472,6 +522,26 @@ thead th {
 .header-cell:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
+}
+
+.header-cell-row .field-help-icon { margin-left: 0; margin-right: var(--space-2); flex-shrink: 0; }
+
+/* A la taula, la vinyeta d'ajuda no pot obrir cap a la dreta (com al
+   modal): a l'última columna quedaria tallada per l'overflow:auto de
+   .table-wrap, o directament fora de la pantalla. Obre cap avall,
+   alineada amb la vora dreta de la icona, perquè mai calgui espai
+   horitzontal addicional a la dreta. */
+.header-cell-row .field-help-icon[data-tooltip]::before {
+  left: auto;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  max-width: 220px;
+  font-weight: 400;
+  transform: translateY(4px);
+}
+.header-cell-row .field-help-icon[data-tooltip]:hover::before,
+.header-cell-row .field-help-icon[data-tooltip]:focus-visible::before {
+  transform: translateY(0);
 }
 
 .header-cell-label {
@@ -558,10 +628,54 @@ tr:hover .cell-input.dirty { background: var(--color-sand-light); }
 }
 .cell-input-readonly:focus { box-shadow: none; }
 
-.row-actions-col { width: 76px; min-width: 76px; }
+/* El desplegable (multiselecció/any/unit) reutilitza el mateix component
+   que al modal (vegeu modal-multiselect.css), amb vora i cantonades
+   pròpies. Dins la taula ha de quedar flush a la cel·la com .cell-input,
+   no com un "xip" flotant. */
+td .multiselect-trigger {
+  border: none;
+  border-radius: 0;
+  padding: var(--space-3) var(--space-3);
+  background: transparent;
+}
+tr:hover td .multiselect-trigger { background: var(--bg-surface); }
+td .multiselect-trigger:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  background: var(--bg-page);
+}
+
+/* La fletxa, en repòs, queda molt tènue perquè la cel·la es continuï
+   veient propera a una columna de text normal, però mai desapareix del
+   tot: sense cap indici visible, res distingeix una cel·la editable
+   com a desplegable d'una de text pla (els punts de color, en canvi,
+   ja es mantenien sempre visibles). */
+td .multiselect-trigger-chevron { opacity: 0.35; }
+td .multiselect-trigger:hover .multiselect-trigger-chevron,
+td .multiselect-trigger:focus-visible .multiselect-trigger-chevron,
+td .multiselect-trigger.is-open .multiselect-trigger-chevron {
+  opacity: 1;
+}
+
+.row-actions-col { width: 116px; min-width: 116px; }
 td.row-actions-col, th.row-actions-col { text-align: center; }
 td.row-actions-col { padding: 0 var(--space-2); white-space: nowrap; }
 td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
+
+/* A tàctil, .icon-btn puja a 44×44 (vegeu més avall): casella + 2
+   botons ja no caben en els 116px pensats per a ratolí, i quedarien
+   superposats o retallats. */
+@media (pointer: coarse) {
+  .row-actions-col { width: 152px; min-width: 152px; }
+}
+
+.row-select-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-right: var(--space-2);
+  accent-color: var(--color-charcoal);
+  cursor: pointer;
+  vertical-align: middle;
+}
 
 /* Amplades específiques per a la taula simplificada de "Preus per dia"
    (vegeu COLUMN_WIDTH_CLASSES a state.js): DATA és una descripció
@@ -604,6 +718,11 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
   padding: 0;
   width: min(480px, calc(100vw - var(--space-6) * 2));
   box-shadow: 0 12px 32px rgba(28, 28, 26, 0.18);
+  /* transition de "width" (no transform) a consciència: en passar a
+     .modal-wide el contingut es reorganitza en més columnes (vegeu
+     modal-breakdown.css), un canvi real de layout que un scaleX()
+     distorsionaria en lloc de refluir correctament. Únic ús, no és una
+     animació contínua, així que el cost de layout és negligible. */
   transition: width var(--duration) var(--ease-out);
 }
 
@@ -649,9 +768,13 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 
 .modal-progress-fill {
   height: 100%;
+  width: 100%;
+  transform-origin: left;
   background: var(--color-charcoal);
   border-radius: var(--radius-pill);
-  transition: width 220ms var(--ease-out);
+  /* transform en lloc de width: no força recàlcul de layout a cada
+     canvi de pas (només compositor), detectat pel linter d'Impeccable. */
+  transition: transform 220ms var(--ease-out);
 }
 
 .modal-fields {
@@ -764,6 +887,13 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 }
 
 .modal-actions-spacer { flex: 1; }
+
+/* Confirmació d'accions destructives (esborrar fila): substitueix el
+   confirm() natiu del navegador, que no es pot estilitzar, bloqueja el
+   fil i no dona context de la fila afectada. Reutilitza .modal però
+   més estret, ja que només mostra un missatge curt. */
+.modal-confirm { width: min(400px, calc(100vw - var(--space-6) * 2)); }
+.confirm-message { margin: 0; color: var(--fg-primary); }
 /* ---------------------------------------------------------
    Multiselecció / uniselecció (Masia, Any, Unit, Dia, Mes...)
    --------------------------------------------------------- */
@@ -1398,6 +1528,14 @@ button.calendar-day:focus-visible {
     <button id="refreshBtn" class="btn btn-ghost" type="button" aria-label="Refresca" data-tooltip="Torna a carregar les dades del full"></button>
   </div>
 
+  <div id="bulkActionsBar" class="bulk-actions-bar" hidden role="status" aria-live="polite">
+    <span id="bulkActionsCount" class="bulk-actions-count"></span>
+    <button type="button" id="bulkClearBtn" class="btn btn-ghost">Deselecciona</button>
+    <span class="toolbar-spacer"></span>
+    <button type="button" id="bulkDuplicateBtn" class="btn btn-ghost">Duplica</button>
+    <button type="button" id="bulkDeleteBtn" class="btn btn-danger">Esborra</button>
+  </div>
+
   <div id="tableWrap" class="table-wrap">
     <table id="dataTable"></table>
   </div>
@@ -1423,6 +1561,20 @@ button.calendar-day:focus-visible {
       <button type="submit" id="addRowSubmitBtn" class="btn btn-primary" hidden>Crea la fila</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="confirmDialog" class="modal modal-confirm">
+  <div class="modal-header">
+    <h2 class="modal-title">Segur?</h2>
+  </div>
+  <div class="modal-fields">
+    <p id="confirmMessage" class="confirm-message"></p>
+  </div>
+  <div class="modal-actions">
+    <button type="button" id="confirmCancelBtn" class="btn btn-ghost">Cancel·la</button>
+    <span class="modal-actions-spacer"></span>
+    <button type="button" id="confirmOkBtn" class="btn btn-danger">Esborra</button>
+  </div>
 </dialog>
 
   <script>
@@ -1542,6 +1694,11 @@ const state = {
   // Cau de dades ja carregades per full (nom -> {headers, rows}), perquè
   // canviar de pestanya no obligui a tornar a demanar-les al servidor.
   sheetCache: {},
+  // Files marcades per a una acció en bloc (duplicar/esborrar diverses
+  // alhora). Es referencien per rowIndex, així que es buiden sempre que
+  // es torna a carregar el full (vegeu applySheetData a actions.js):
+  // un rowIndex vell ja no correspondria a la mateixa fila.
+  selectedRows: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
@@ -1599,16 +1756,42 @@ function padRow(row, width) {
   return copy;
 }
 
-function setStatus(message, type) {
+function setStatus(message, type, retry) {
   const el = document.getElementById('statusMsg');
   el.className = 'status' + (type ? ' is-' + type : '');
   el.innerHTML = (type === 'loading' || type === 'success' || type === 'error')
     ? '<span class="status-dot"></span><span>' + message + '</span>'
     : '<span>' + message + '</span>';
+  if (type === 'error' && retry) {
+    const retryBtn = document.createElement('button');
+    retryBtn.type = 'button';
+    retryBtn.className = 'btn btn-ghost status-retry';
+    retryBtn.textContent = 'Torna-ho a provar';
+    retryBtn.addEventListener('click', retry);
+    el.appendChild(retryBtn);
+  }
 }
 
-function onError(err) {
-  setStatus(err && err.message ? err.message : String(err), 'error');
+// Missatges que el propi backend ja llança en català pla (vegeu
+// Código.js, p.ex. getSheetOrThrow_) es mostren tal qual: ja són
+// entenedors i accionables. Qualsevol altra cosa (excepcions de
+// sistema d'Apps Script, talls de xarxa, quotes...) sol arribar en
+// anglès i amb detalls tècnics que no ajuden l'usuari, així que es
+// substitueix per un missatge genèric però clar; l'error real només
+// es registra a la consola per a depuració.
+const TECHNICAL_ERROR_RE = /^(Exception|TypeError|ReferenceError|ScriptError|Error:|Service invoked too many times|Address unavailable|Timeout|Network error)/i;
+
+// progressNote: per a operacions en bloc (duplicar/esborrar diverses
+// files), quantes ja s'havien completat abans que fallés la resta —
+// si no, sembla que no s'ha fet res quan en realitat una part sí.
+function onError(err, retry, progressNote) {
+  const rawMessage = err && err.message ? err.message : String(err);
+  const isTechnical = !rawMessage || TECHNICAL_ERROR_RE.test(rawMessage) || /\n/.test(rawMessage);
+  if (isTechnical) console.error('Error tècnic:', err);
+  const message = isTechnical
+    ? 'No s\'ha pogut completar l\'acció. Comprova la connexió i torna-ho a provar.'
+    : rawMessage;
+  setStatus(message + (progressNote ? ' (' + progressNote + ')' : ''), 'error', retry);
 }
 // Esquelet de càrrega i la construcció de la taula de dades pròpiament
 // dita. La navegació (pestanyes, commutador de vista) viu a
@@ -1644,6 +1827,11 @@ function renderTable() {
 
   const thActions = document.createElement('th');
   thActions.className = 'row-actions-col';
+  const selectAll = document.createElement('input');
+  selectAll.type = 'checkbox';
+  selectAll.className = 'row-select-checkbox';
+  selectAll.setAttribute('aria-label', 'Selecciona totes les files visibles');
+  thActions.appendChild(selectAll);
   headRow.appendChild(thActions);
 
   visibleColIndexes.forEach(function (colIndex) {
@@ -1679,7 +1867,20 @@ function renderTable() {
       renderTable();
     });
 
-    th.appendChild(wrap);
+    const headerRow = document.createElement('div');
+    headerRow.className = 'header-cell-row';
+    headerRow.appendChild(wrap);
+
+    // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
+    // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a la
+    // pròpia capçalera de la taula: les columnes abreujades (MÍN,
+    // PREU/P...) no haurien d'obligar a obrir el modal per entendre-les.
+    // Germana del botó d'ordenació, no filla: un <button> no pot
+    // contenir cap altre element interactiu.
+    const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
+    if (helpIcon) headerRow.appendChild(helpIcon);
+
+    th.appendChild(headerRow);
     headRow.appendChild(th);
   });
 
@@ -1710,6 +1911,22 @@ function renderTable() {
     visible.sort(function (a, b) { return compareForSort(a.row[sortColIndex], b.row[sortColIndex]) * dir; });
   }
 
+  // Neteja de la selecció d'índexs que ja no són visibles (filtrats o
+  // ordenats fora), perquè "Esborra"/"Duplica" en bloc no actuïn mai
+  // sobre una fila que l'usuari ja no veu marcada.
+  const visibleRowIndexes = visible.map(function (item) { return item.rowIndex; });
+  Array.from(state.selectedRows).forEach(function (rowIndex) {
+    if (visibleRowIndexes.indexOf(rowIndex) === -1) state.selectedRows.delete(rowIndex);
+  });
+
+  selectAll.checked = Boolean(visibleRowIndexes.length) && visibleRowIndexes.every(function (rowIndex) { return state.selectedRows.has(rowIndex); });
+  selectAll.indeterminate = !selectAll.checked && visibleRowIndexes.some(function (rowIndex) { return state.selectedRows.has(rowIndex); });
+  selectAll.addEventListener('change', function () {
+    if (selectAll.checked) visibleRowIndexes.forEach(function (rowIndex) { state.selectedRows.add(rowIndex); });
+    else visibleRowIndexes.forEach(function (rowIndex) { state.selectedRows.delete(rowIndex); });
+    renderTable();
+  });
+
   if (!state.rows.length) {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
@@ -1735,6 +1952,16 @@ function renderTable() {
 
     const tdActions = document.createElement('td');
     tdActions.className = 'row-actions-col';
+    const rowSelect = document.createElement('input');
+    rowSelect.type = 'checkbox';
+    rowSelect.className = 'row-select-checkbox';
+    rowSelect.checked = state.selectedRows.has(rowIndex);
+    rowSelect.setAttribute('aria-label', 'Selecciona la fila ' + (rowIndex + 1));
+    rowSelect.addEventListener('change', function () {
+      if (rowSelect.checked) state.selectedRows.add(rowIndex); else state.selectedRows.delete(rowIndex);
+      renderTable();
+    });
+    tdActions.appendChild(rowSelect);
     const dup = document.createElement('button');
     dup.type = 'button';
     dup.className = 'icon-btn';
@@ -1769,6 +1996,25 @@ function renderTable() {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
+  renderBulkActionsBar();
+}
+
+// Barra que apareix sobre la taula quan hi ha files marcades amb la
+// casella de selecció, amb les accions en bloc (duplicar/esborrar).
+function renderBulkActionsBar() {
+  const bar = document.getElementById('bulkActionsBar');
+  const count = state.selectedRows.size;
+  bar.hidden = count === 0;
+  if (!count) return;
+  document.getElementById('bulkActionsCount').textContent =
+    count === 1 ? '1 fila seleccionada' : (count + ' files seleccionades');
+  const rowIndexes = Array.from(state.selectedRows);
+  document.getElementById('bulkDuplicateBtn').onclick = function () { handleBulkDuplicate(rowIndexes); };
+  document.getElementById('bulkDeleteBtn').onclick = function () { handleBulkDelete(rowIndexes); };
+  document.getElementById('bulkClearBtn').onclick = function () {
+    state.selectedRows.clear();
+    renderTable();
+  };
 }
 // Pestanyes de full, commutador Taula/Calendari, i el dispatcher que
 // decideix quina vista (taula o calendari) i quin joc de filtres toca
@@ -2063,9 +2309,81 @@ function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
     })
     .withFailureHandler(function (err) {
       if (onRevert) onRevert();
-      onError(err);
+      onError(err, function () { saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess); });
     })
     .updateCell(state.currentName, rowIndex, colIndex, newValue);
+}
+// Navegació de cel·la a cel·la amb les fletxes, com un full de càlcul:
+// des de qualsevol control d'una cel·la de la taula, amunt/avall/
+// esquerra/dreta mouen el focus a la cel·la veïna en lloc de la
+// pàgina. Un únic listener delegat a #tableWrap (la taula es
+// reconstrueix sencera a cada renderTable, així que no té sentit
+// enganxar-lo cel·la per cel·la).
+function getFocusableCellControls(td) {
+  return Array.prototype.slice.call(
+    td.querySelectorAll('input:not([type="hidden"]):not(:disabled), button:not(:disabled)')
+  );
+}
+
+// fromEnd: en entrar a una cel·la amb més d'un control (la columna
+// d'accions té casella + duplica + esborra) venint de la dreta, cal
+// aterrar en el darrer control, no sempre el primer.
+function focusCellControl(td, fromEnd) {
+  if (!td) return false;
+  const controls = getFocusableCellControls(td);
+  const target = fromEnd ? controls[controls.length - 1] : controls[0];
+  if (!target) return false;
+  target.focus();
+  return true;
+}
+
+function handleTableKeyNav(event) {
+  const key = event.key;
+  if (key !== 'ArrowUp' && key !== 'ArrowDown' && key !== 'ArrowLeft' && key !== 'ArrowRight') return;
+
+  const td = event.target.closest('td');
+  if (!td) return;
+  const tr = td.parentElement;
+  const cellIndex = Array.prototype.indexOf.call(tr.children, td);
+
+  // Dins d'un input de text, esquerra/dreta han de moure el cursor
+  // normalment; només salten de cel·la quan el cursor ja és a l'extrem.
+  if ((key === 'ArrowLeft' || key === 'ArrowRight') &&
+      event.target.tagName === 'INPUT' && event.target.type !== 'checkbox') {
+    const input = event.target;
+    const atStart = input.selectionStart === 0 && input.selectionEnd === 0;
+    const atEnd = input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
+    if ((key === 'ArrowLeft' && !atStart) || (key === 'ArrowRight' && !atEnd)) return;
+  }
+
+  // Dins d'una mateixa cel·la amb més d'un control (columna d'accions:
+  // casella, duplica, esborra), esquerra/dreta primer cicla entre els
+  // controls de la pròpia cel·la — si no, les fletxes mai arribarien a
+  // duplicar/esborrar (sempre quedarien a la casella, la primera trobada).
+  if (key === 'ArrowLeft' || key === 'ArrowRight') {
+    const controls = getFocusableCellControls(td);
+    if (controls.length > 1) {
+      const currentIndex = controls.indexOf(event.target);
+      const nextIndex = currentIndex + (key === 'ArrowRight' ? 1 : -1);
+      if (currentIndex !== -1 && nextIndex >= 0 && nextIndex < controls.length) {
+        controls[nextIndex].focus();
+        event.preventDefault();
+        return;
+      }
+    }
+  }
+
+  let targetRow = tr;
+  let targetIndex = cellIndex;
+  let fromEnd = false;
+  if (key === 'ArrowUp') targetRow = tr.previousElementSibling;
+  else if (key === 'ArrowDown') targetRow = tr.nextElementSibling;
+  else if (key === 'ArrowLeft') { targetIndex = cellIndex - 1; fromEnd = true; }
+  else targetIndex = cellIndex + 1;
+
+  if (!targetRow) return;
+  const targetCell = targetRow.children[targetIndex];
+  if (targetCell && focusCellControl(targetCell, fromEnd)) event.preventDefault();
 }
 // Regles i dades del full "Preus per dia" (PreusMenu). Cada fila NO és
 // un dia concret: és una regla recurrent ("Dissabtes de Juny, Juliol,
@@ -3963,8 +4281,8 @@ function isLastStep() {
 
 function updateProgressBar() {
   const plannedSteps = Math.max(getPlannedStepCount(), modalStepIndex + 1);
-  document.getElementById('addRowProgressFill').style.width =
-    Math.round(((modalStepIndex + 1) / plannedSteps) * 100) + '%';
+  document.getElementById('addRowProgressFill').style.transform =
+    'scaleX(' + ((modalStepIndex + 1) / plannedSteps) + ')';
 }
 
 function updateModalNavButtons() {
@@ -4033,15 +4351,53 @@ function submitAddRowForm(event) {
   });
 
   closeAddRowModal();
+  submitNewRow(values);
+}
+
+function submitNewRow(values) {
   setStatus('Afegint fila...', 'loading');
   google.script.run
     .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
+    .withFailureHandler(function (err) { onError(err, function () { submitNewRow(values); }); })
     .appendRow(state.currentName, values);
+}
+// Confirmació estilitzada per a accions destructives (esborrar fila), en
+// lloc del confirm() natiu del navegador: aquest no es pot estilitzar,
+// bloqueja el fil principal i no permet mostrar context (p.ex. quina
+// fila concreta s'esborrarà) més enllà d'un únic missatge pla.
+function confirmDelete(message, confirmLabel) {
+  return new Promise(function (resolve) {
+    const dialog = document.getElementById('confirmDialog');
+    document.getElementById('confirmMessage').textContent = message;
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    okBtn.textContent = confirmLabel || 'Esborra';
+
+    function cleanup(result) {
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      dialog.removeEventListener('cancel', onCancel);
+      if (dialog.open) dialog.close();
+      resolve(result);
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    // "cancel" es dispara en tancar amb Escape, abans que el navegador
+    // tanqui el <dialog> ell mateix.
+    dialog.addEventListener('cancel', onCancel);
+    dialog.showModal();
+    okBtn.focus();
+  });
 }
 function loadMeta() {
   setStatus('Carregant...', 'loading');
-  google.script.run.withSuccessHandler(onMetaLoaded).withFailureHandler(onError).getSheetsMeta();
+  google.script.run
+    .withSuccessHandler(onMetaLoaded)
+    .withFailureHandler(function (err) { onError(err, loadMeta); })
+    .getSheetsMeta();
 }
 
 function onMetaLoaded(sheets) {
@@ -4060,7 +4416,7 @@ function loadCurrentSheet(silent) {
   if (!silent) setStatus('Carregant...', 'loading');
   google.script.run
     .withSuccessHandler(function (data) { onSheetLoaded(data, requestedName, silent); })
-    .withFailureHandler(silent ? function () {} : onError)
+    .withFailureHandler(silent ? function () {} : function (err) { onError(err, function () { loadCurrentSheet(silent); }); })
     .getSheetData(requestedName);
 }
 
@@ -4069,6 +4425,7 @@ function applySheetData(data) {
   const width = state.headers.length;
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
+  state.selectedRows.clear();
 }
 
 function onSheetLoaded(data, requestedName, silent) {
@@ -4099,18 +4456,84 @@ function handleDuplicateRow(rowIndex) {
   setStatus('Duplicant fila...', 'loading');
   google.script.run
     .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
+    .withFailureHandler(function (err) { onError(err, function () { handleDuplicateRow(rowIndex); }); })
     .appendRow(state.currentName, values);
+}
+
+function performDeleteRow(rowIndex) {
+  setStatus('Esborrant fila...', 'loading');
+  google.script.run
+    .withSuccessHandler(loadCurrentSheet)
+    .withFailureHandler(function (err) { onError(err, function () { performDeleteRow(rowIndex); }); })
+    .deleteRow(state.currentName, rowIndex);
 }
 
 function handleDeleteRow(rowIndex) {
   const label = state.rows[rowIndex][0] || ('fila ' + (rowIndex + 1));
-  if (!confirm('Segur que vols esborrar "' + label + '"?')) return;
-  setStatus('Esborrant fila...', 'loading');
-  google.script.run
-    .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
-    .deleteRow(state.currentName, rowIndex);
+  confirmDelete('Segur que vols esborrar "' + label + '"? Aquesta acció no es pot desfer.').then(function (confirmed) {
+    if (confirmed) performDeleteRow(rowIndex);
+  });
+}
+
+// Duplicar en bloc: l'ordre no importa (cada fila s'afegeix al final,
+// sense desplaçar les altres), així que es processen seqüencialment
+// una darrere l'altra i es recarrega el full en acabar totes.
+function handleBulkDuplicate(rowIndexes) {
+  const idColIndex = state.headers.findIndex(isIdHeader);
+  const dataColIndex = state.headers.findIndex(isDataHeader);
+  const total = rowIndexes.length;
+
+  let i = 0;
+  function next() {
+    if (i >= total) { loadCurrentSheet(); return; }
+    const done = i;
+    setStatus('Duplicant fila ' + (done + 1) + ' de ' + total + '...', 'loading');
+    const rowIndex = rowIndexes[i++];
+    const source = state.rows[rowIndex];
+    const values = source.map(function (value, colIndex) {
+      if (colIndex === idColIndex || colIndex === dataColIndex) return '';
+      return value;
+    });
+    google.script.run
+      .withSuccessHandler(next)
+      .withFailureHandler(function (err) {
+        onError(err, function () { handleBulkDuplicate(rowIndexes.slice(i - 1)); }, done + ' de ' + total + ' files duplicades abans de l\'error.');
+      })
+      .appendRow(state.currentName, values);
+  }
+  next();
+}
+
+// Esborrar en bloc: cal processar-les de l'índex més alt al més baix,
+// perquè esborrar una fila desplaça totes les de sota una posició amunt
+// (canviaria l'índex de les que encara falta esborrar si no es fes així).
+function handleBulkDelete(rowIndexes) {
+  const count = rowIndexes.length;
+  const message = count === 1
+    ? 'Segur que vols esborrar la fila seleccionada? Aquesta acció no es pot desfer.'
+    : 'Segur que vols esborrar aquestes ' + count + ' files? Aquesta acció no es pot desfer.';
+  confirmDelete(message, count === 1 ? 'Esborra' : 'Esborra-les').then(function (confirmed) {
+    if (!confirmed) return;
+    performBulkDelete(rowIndexes.slice().sort(function (a, b) { return b - a; }));
+  });
+}
+
+function performBulkDelete(sortedDescRowIndexes) {
+  const total = sortedDescRowIndexes.length;
+  let i = 0;
+  function next() {
+    if (i >= total) { loadCurrentSheet(); return; }
+    const done = i;
+    setStatus('Esborrant fila ' + (done + 1) + ' de ' + total + '...', 'loading');
+    const rowIndex = sortedDescRowIndexes[i++];
+    google.script.run
+      .withSuccessHandler(next)
+      .withFailureHandler(function (err) {
+        onError(err, function () { performBulkDelete(sortedDescRowIndexes.slice(i - 1)); }, done + ' de ' + total + ' files esborrades abans de l\'error.');
+      })
+      .deleteRow(state.currentName, rowIndex);
+  }
+  next();
 }
 document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('addRowBtn').innerHTML = ICONS.plus + '<span>Fila</span>';
@@ -4122,6 +4545,8 @@ document.addEventListener('DOMContentLoaded', function () {
     state.simplifyTable = e.target.checked;
     renderCurrentView();
   });
+
+  document.getElementById('tableWrap').addEventListener('keydown', handleTableKeyNav);
 
   document.getElementById('addRowForm').addEventListener('submit', submitAddRowForm);
   document.getElementById('addRowCancelBtn').addEventListener('click', closeAddRowModal);

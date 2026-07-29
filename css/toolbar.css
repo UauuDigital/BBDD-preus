@@ -49,6 +49,14 @@
 }
 .btn-ghost:hover { background: var(--bg-surface); }
 
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--action-primary-fg);
+}
+.btn-danger:hover { filter: brightness(0.92); }
+.btn-danger:active { filter: brightness(0.85); }
+
 /* Vinyeta a sota i centrada, com les pestanyes (mateixa base a
    [data-tooltip]::before): botons "+ Fila" i "Refresca". */
 .btn[data-tooltip]::before {
@@ -65,11 +73,9 @@
 
 .table-filters {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  overflow-x: auto;
-  max-width: 100%;
 }
 .table-filters[hidden] { display: none; }
 
@@ -117,6 +123,22 @@
   outline-offset: 2px;
 }
 
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  background: var(--bg-warm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+.bulk-actions-count {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+
 .sheet-hint {
   margin: calc(var(--space-5) * -1 + var(--space-1)) 0 var(--space-4);
   font-size: var(--text-sm);
@@ -147,6 +169,14 @@
 
 .status.is-error { color: var(--color-danger); font-weight: 500; }
 .status.is-error .status-dot::before { content: '!'; font-size: 0.8em; font-weight: 700; }
+
+.status-retry {
+  padding: 2px var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-danger);
+  text-decoration: underline;
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {

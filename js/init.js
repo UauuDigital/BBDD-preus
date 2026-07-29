@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCurrentView();
   });
 
+  document.getElementById('tableWrap').addEventListener('keydown', handleTableKeyNav);
+
   document.getElementById('addRowForm').addEventListener('submit', submitAddRowForm);
   document.getElementById('addRowCancelBtn').addEventListener('click', closeAddRowModal);
   document.getElementById('addRowNextBtn').addEventListener('click', handleModalNext);

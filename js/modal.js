@@ -41,9 +41,13 @@ function submitAddRowForm(event) {
   });
 
   closeAddRowModal();
+  submitNewRow(values);
+}
+
+function submitNewRow(values) {
   setStatus('Afegint fila...', 'loading');
   google.script.run
     .withSuccessHandler(loadCurrentSheet)
-    .withFailureHandler(onError)
+    .withFailureHandler(function (err) { onError(err, function () { submitNewRow(values); }); })
     .appendRow(state.currentName, values);
 }
