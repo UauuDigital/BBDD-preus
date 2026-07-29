@@ -35,10 +35,23 @@
 }
 .switch-option-group:last-child { margin-bottom: 0; }
 
+/* 3 columnes per als camps d'idioma (Català/Castellà/Anglès), que van
+   junts; el Preu no hi té cap relació semàntica i ocupa la seva pròpia
+   línia sencera (.switch-price-field) en lloc de compartir fila amb
+   "Anglès" per pura coincidència de posició en una graella 2×2. */
 .switch-fields-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
+}
+.switch-fields-grid .switch-price-field {
+  grid-column: 1 / -1;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-default);
+}
+
+@media (max-width: 480px) {
+  .switch-fields-grid { grid-template-columns: 1fr 1fr; }
 }
 
 .switch-option-heading {

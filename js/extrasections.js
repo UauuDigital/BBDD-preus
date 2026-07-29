@@ -52,7 +52,7 @@ function buildInputNumericSection(colIndex) {
   return container;
 }
 
-function buildSwitchOptionGroup(label, optionData, onChange) {
+function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
   const group = document.createElement('div');
   group.className = 'switch-option-group';
 
@@ -71,6 +71,7 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
     { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en' },
     { key: 'PREU', label: 'Preu', type: 'currency' },
   ].forEach(function (def) {
+    const fieldId = idPrefix + def.key;
     let control;
     if (def.type === 'currency') {
       const wrap = document.createElement('div');
@@ -78,6 +79,7 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
       const input = document.createElement('input');
       input.type = 'number';
       input.step = '0.01';
+      input.id = fieldId;
       input.value = optionData[def.key] === undefined ? '' : optionData[def.key];
       input.addEventListener('input', function () {
         optionData[def.key] = input.value === '' ? '' : Number(input.value);
@@ -92,6 +94,7 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
     } else {
       const input = document.createElement('input');
       input.type = 'text';
+      input.id = fieldId;
       input.value = optionData[def.key] || '';
       input.addEventListener('input', function () {
         optionData[def.key] = input.value;
@@ -101,10 +104,15 @@ function buildSwitchOptionGroup(label, optionData, onChange) {
       langInputs.push({ input: input, lang: def.lang });
     }
 
+    // El Preu no té cap relació semàntica amb els 3 camps d'idioma
+    // (CAT/CAST/ENG): es distingeix visualment (vegeu
+    // .switch-price-field a modal-breakdown.css) en lloc de compartir
+    // fila amb "Anglès" per pura coincidència de posició a la graella.
     const field = document.createElement('div');
-    field.className = 'modal-field';
+    field.className = 'modal-field' + (def.key === 'PREU' ? ' switch-price-field' : '');
     const fieldLabel = document.createElement('label');
     fieldLabel.textContent = def.label;
+    fieldLabel.setAttribute('for', fieldId);
     field.appendChild(fieldLabel);
     field.appendChild(control);
     fieldsGrid.appendChild(field);
@@ -144,8 +152,8 @@ function buildSwitchSection(colIndex) {
 
   const optionsGrid = document.createElement('div');
   optionsGrid.className = 'switch-options-grid';
-  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 1', current.Opcio1, sync));
-  optionsGrid.appendChild(buildSwitchOptionGroup('Opció 2', current.Opcio2, sync));
+  optionsGrid.appendChild(buildSwitchOptionGroup('switchField' + colIndex + 'Opcio1', 'Opció 1', current.Opcio1, sync));
+  optionsGrid.appendChild(buildSwitchOptionGroup('switchField' + colIndex + 'Opcio2', 'Opció 2', current.Opcio2, sync));
   container.appendChild(optionsGrid);
   container.appendChild(hiddenInput);
 
