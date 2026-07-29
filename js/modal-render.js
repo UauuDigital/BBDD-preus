@@ -34,24 +34,24 @@ function renderModalStep() {
 
   if (modalStepIndex === STEP_EXTRAS) {
     const selectedExtras = getSelectedAltresExtresLive();
-    if (selectedExtras.indexOf('Input Númeric') !== -1) {
+    if (selectedExtras.indexOf('extraunit') !== -1) {
       const colIndex = state.headers.indexOf('ExtraUnitat');
       if (colIndex !== -1) fieldsWrap.appendChild(buildInputNumericSection(colIndex));
     }
-    if (selectedExtras.indexOf('Switch') !== -1) {
+    if (selectedExtras.indexOf('switch') !== -1) {
       const colIndex = state.headers.indexOf('ExtraSwitch');
       if (colIndex !== -1) fieldsWrap.appendChild(buildSwitchSection(colIndex));
     }
   } else if (modalStepIndex === STEP_BREAKDOWN) {
     const selected = getSelectedExtresLlistaLive();
-    if (selected.indexOf('Desplegable') !== -1) {
+    if (selected.indexOf('desplegable') !== -1) {
       const colIndex = state.headers.indexOf(DESPLEGABLE_HEADER);
       if (colIndex !== -1) fieldsWrap.appendChild(buildDesplegableSection(colIndex));
     }
-    if (selected.indexOf('Llindà') !== -1) {
+    if (selected.indexOf('llinda') !== -1) {
       fieldsWrap.appendChild(buildLlindaSection());
     }
-    if (selected.indexOf('Altres Extres') !== -1) {
+    if (selected.indexOf('altresExtres') !== -1) {
       const section = buildAltresExtresSection();
       if (section) fieldsWrap.appendChild(section);
     }

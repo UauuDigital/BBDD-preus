@@ -68,7 +68,7 @@ function getFieldSteps() {
 // columna "conditionHeader" (pas "Opcions") s'ha marcat.
 const DETAIL_STEP_FIELDS = [
   { header: 'Unit', conditionHeader: 'quantityBased', kind: 'select', options: ['Pack', 'Persona'] },
-  { header: 'ExtresLlista', conditionHeader: 'Extres', kind: 'multiselect', options: ['Desplegable', 'Llindà', 'Altres Extres'] },
+  { header: 'ExtresLlista', conditionHeader: 'Extres', kind: 'multiselect', options: ['desplegable', 'llinda', 'altresExtres'] },
 ];
 
 // Índexs de pas (fixos: 0 i 1 sempre existeixen; 2, 3 i 4 són condicionals).

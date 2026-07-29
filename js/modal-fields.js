@@ -202,7 +202,7 @@ function buildAltresExtresSection() {
 
   const fieldsGrid = document.createElement('div');
   fieldsGrid.className = 'modal-fields modal-fields-nested';
-  const control = buildMultiselectField(colIndex, modalValues[colIndex], ['Input Númeric', 'Switch']);
+  const control = buildMultiselectField(colIndex, modalValues[colIndex], ['extraunit', 'switch']);
   appendField(fieldsGrid, colIndex, 'ExtraExtresLlista', control);
   control.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
     checkbox.addEventListener('change', updateModalNavButtons);

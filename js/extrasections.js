@@ -1,6 +1,7 @@
 // Pas 5 (condicional): secció "Input Númeric" (Unitat + Preu, desat a
-// ExtraUnitat com a JSON) i secció "Switch" (dues opcions CAT/CAST/ENG
-// + Preu, desades a ExtraSwitch com a JSON).
+// ExtraUnitat com "Unitat,Preu") i secció "Switch" (dues opcions
+// CAT/CAST/ENG + Preu, desades a ExtraSwitch com
+// "CAT1,CAST1,ENG1,PREU1,CAT2,CAST2,ENG2,PREU2").
 
 function buildInputNumericSection(colIndex) {
   const container = document.createElement('div');
@@ -11,18 +12,15 @@ function buildInputNumericSection(colIndex) {
   heading.textContent = 'Input Númeric';
   container.appendChild(heading);
 
-  let current = {};
-  try { current = JSON.parse(modalValues[colIndex] || '{}'); } catch (e) { current = {}; }
+  const parts = String(modalValues[colIndex] || '').split(',');
+  const current = { Unitat: parts[0] || '', Preu: parts[1] || '' };
 
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
 
   function sync() {
-    hiddenInput.value = JSON.stringify({
-      Unitat: unitatInput.value,
-      Preu: preuInput.value === '' ? '' : Number(preuInput.value),
-    });
+    hiddenInput.value = unitatInput.value + ',' + preuInput.value;
   }
 
   const fieldsGrid = document.createElement('div');
@@ -30,7 +28,7 @@ function buildInputNumericSection(colIndex) {
 
   const unitatInput = document.createElement('input');
   unitatInput.type = 'text';
-  unitatInput.value = current.Unitat || '';
+  unitatInput.value = current.Unitat;
   unitatInput.addEventListener('input', sync);
   appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
 
@@ -39,7 +37,7 @@ function buildInputNumericSection(colIndex) {
   const preuInput = document.createElement('input');
   preuInput.type = 'number';
   preuInput.step = '0.01';
-  preuInput.value = current.Preu === undefined ? '' : current.Preu;
+  preuInput.value = current.Preu;
   preuInput.addEventListener('input', sync);
   const preuSuffix = document.createElement('span');
   preuSuffix.className = 'currency-suffix';
@@ -127,16 +125,22 @@ function buildSwitchSection(colIndex) {
   heading.textContent = 'Switch';
   container.appendChild(heading);
 
-  let current = {};
-  try { current = JSON.parse(modalValues[colIndex] || '{}'); } catch (e) { current = {}; }
-  current.Opcio1 = current.Opcio1 || {};
-  current.Opcio2 = current.Opcio2 || {};
+  const parts = String(modalValues[colIndex] || '').split(',');
+  const current = {
+    Opcio1: { CAT: parts[0] || '', CAST: parts[1] || '', ENG: parts[2] || '', PREU: parts[3] || '' },
+    Opcio2: { CAT: parts[4] || '', CAST: parts[5] || '', ENG: parts[6] || '', PREU: parts[7] || '' },
+  };
 
   const hiddenInput = document.createElement('input');
   hiddenInput.type = 'hidden';
   hiddenInput.dataset.colIndex = String(colIndex);
 
-  function sync() { hiddenInput.value = JSON.stringify(current); }
+  function sync() {
+    hiddenInput.value = [
+      current.Opcio1.CAT, current.Opcio1.CAST, current.Opcio1.ENG, current.Opcio1.PREU,
+      current.Opcio2.CAT, current.Opcio2.CAST, current.Opcio2.ENG, current.Opcio2.PREU,
+    ].join(',');
+  }
 
   const optionsGrid = document.createElement('div');
   optionsGrid.className = 'switch-options-grid';
