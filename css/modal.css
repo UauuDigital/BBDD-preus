@@ -135,6 +135,11 @@
 }
 .modal-field.is-invalid .modal-field-error { display: block; }
 
+/* Camps obligatoris condicionals marcats amb wireRequiredField (vegeu
+   modal-fields.js), que no sempre tenen la classe .modal-field (p.ex.
+   la secció "Desplegable" és un .breakdown-section sencer). */
+[data-required-check="true"].is-invalid > .modal-field-error { display: block; }
+
 .modal-field.is-invalid input,
 .modal-field.is-invalid .multiselect-trigger {
   border-color: var(--color-danger);

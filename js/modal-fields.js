@@ -60,6 +60,13 @@ const FIELD_HELP_TEXT = {
   'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
   'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
   'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
+  'Desplegable': 'Marca-ho si aquest servei ofereix un desplegable d\'opcions amb preus diferents (es configura al pas de desglossament).',
+  'Unit': 'Si el preu és per persona o per pack sencer (packs fixos, independentment del nombre de persones).',
+  'ExtresLlista': 'Quins tipus d\'extra vols configurar per a aquest servei: desplegable d\'opcions, llindars per trams, o altres extres addicionals.',
+  'ExtraExtresLlista': 'Quin tipus d\'extra addicional vols configurar: un camp numèric amb preu (Input Numèric) o dues opcions alternatives amb preu cada una (Switch).',
+  'Unitat': 'Nom de la unitat que es multiplica pel preu (p.ex. "hora", "m2", "persona addicional").',
+  'Llindà preu X<0': 'Preu per convidat quan el nombre de convidats és per sota del "Principi" d\'aquest tram.',
+  'Llindà preu 0<X': 'Preu per convidat quan el nombre de convidats és per sobre del "Final" d\'aquest tram.',
   'Dia': 'Dia(es) de la setmana als quals s\'aplica. Buit = tots els dies.',
   'Mes': 'Mes(os) als quals s\'aplica. Buit = tots els mesos.',
   'Excepte': 'Data concreta que queda exclosa d\'aquesta regla (p.ex. un festiu).',
@@ -153,6 +160,80 @@ function appendField(container, colIndex, label, control, options) {
   }
 
   container.appendChild(field);
+  return field;
+}
+
+// Camps obligatoris condicionals fora del pas "Informació general"
+// (p.ex. "Unit" si "quantityBased" és cert, els preus del Llindà si
+// s'ha triat, els camps del Switch...): quan el control té un colIndex
+// real i propi, appendField(..., {required:true}) ja n'hi ha prou. Però
+// alguns camps són compostos (el Switch desa 8 valors en un únic
+// colIndex; el Llindà i l'Input Numèric barregen diversos inputs sota
+// un mateix colIndex combinat): aquí getFieldControlValue (basat en
+// colIndex) no pot distingir-los, així que es marquen amb
+// wireRequiredField, que guarda la seva pròpia manera de llegir el
+// valor en lloc de dependre de data-col-index.
+function wireRequiredField(field, getValue, errorMessage) {
+  field.classList.add('is-required-check');
+  field.dataset.requiredCheck = 'true';
+  field._getRequiredValue = getValue;
+
+  const error = document.createElement('p');
+  error.className = 'modal-field-error';
+  error.textContent = errorMessage || 'Aquest camp és obligatori.';
+  field.appendChild(error);
+
+  function clearInvalid() {
+    if (getValue().trim() === '') return;
+    field.classList.remove('is-invalid');
+  }
+  field.addEventListener('input', clearInvalid);
+  field.addEventListener('change', clearInvalid);
+}
+
+// Comprova tots els camps obligatoris (dels dos mecanismes anteriors)
+// dins el contenidor donat, marca visualment els buits i retorna si es
+// pot avançar de pas.
+function validateRequiredFieldsIn(container) {
+  let allValid = true;
+  let firstInvalidField = null;
+
+  function markInvalid(fieldEl, isEmpty, ariaTarget) {
+    fieldEl.classList.toggle('is-invalid', isEmpty);
+    if (ariaTarget) ariaTarget.setAttribute('aria-invalid', isEmpty ? 'true' : 'false');
+    if (isEmpty) {
+      allValid = false;
+      if (!firstInvalidField) firstInvalidField = fieldEl;
+    }
+  }
+
+  container.querySelectorAll('.modal-field[data-field-index]').forEach(function (fieldEl) {
+    const ariaTarget = getFieldAriaTarget(fieldEl);
+    if (!ariaTarget || ariaTarget.getAttribute('aria-required') !== 'true') return;
+    const colIndex = Number(fieldEl.dataset.fieldIndex);
+    const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
+    const isEmpty = !disabledControl && getFieldControlValue(colIndex).trim() === '';
+    markInvalid(fieldEl, isEmpty, ariaTarget);
+  });
+
+  container.querySelectorAll('[data-required-check="true"]').forEach(function (fieldEl) {
+    markInvalid(fieldEl, fieldEl._getRequiredValue().trim() === '', null);
+  });
+
+  if (firstInvalidField) {
+    const focusable = firstInvalidField.querySelector('input:not([type="hidden"]), .multiselect-trigger');
+    (focusable || firstInvalidField).focus();
+  }
+  return allValid;
+}
+
+// Punt d'entrada únic cridat abans d'avançar de pas o de desar: el pas
+// "Informació general" té la seva pròpia validació (requiredHeaders
+// per columna real); qualsevol altre pas fa servir el mecanisme
+// genèric anterior.
+function validateActiveStep() {
+  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return false;
+  return validateRequiredFieldsIn(document.getElementById('addRowFields'));
 }
 
 // Valida el pas "Informació general": tots els camps hi són obligatoris

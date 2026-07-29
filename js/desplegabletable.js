@@ -99,6 +99,7 @@ function buildDesplegableSection(colIndex) {
         items.splice(index, 1);
         hiddenInput.value = JSON.stringify(items);
         renderRows();
+        container.dispatchEvent(new Event('change'));
       });
       tdActions.appendChild(removeBtn);
       tr.appendChild(tdActions);
@@ -113,14 +114,17 @@ function buildDesplegableSection(colIndex) {
   const catInput = document.createElement('input');
   catInput.type = 'text';
   catInput.placeholder = 'Català';
+  wireHoverTooltip(catInput, 'Nom de l\'opció en català. Si l\'escrius aquí, es tradueix sol a Castellà i Anglès.');
 
   const castInput = document.createElement('input');
   castInput.type = 'text';
   castInput.placeholder = 'Castellà';
+  wireHoverTooltip(castInput, 'Traducció al castellà (es genera sola en escriure el nom en català, però es pot editar a mà).');
 
   const engInput = document.createElement('input');
   engInput.type = 'text';
   engInput.placeholder = 'Anglès';
+  wireHoverTooltip(engInput, 'Traducció a l\'anglès (es genera sola en escriure el nom en català, però es pot editar a mà).');
 
   const priceWrap = document.createElement('div');
   priceWrap.className = 'currency-field';
@@ -128,6 +132,7 @@ function buildDesplegableSection(colIndex) {
   priceInput.type = 'number';
   priceInput.step = '0.01';
   priceInput.placeholder = 'Preu';
+  wireHoverTooltip(priceWrap, 'Preu d\'aquesta opció del desplegable.');
   const priceSuffix = document.createElement('span');
   priceSuffix.className = 'currency-suffix';
   priceSuffix.textContent = '€';
@@ -138,6 +143,7 @@ function buildDesplegableSection(colIndex) {
   addBtn.type = 'button';
   addBtn.className = 'btn btn-primary';
   addBtn.textContent = 'Afegeix a la taula';
+  wireHoverTooltip(addBtn, 'Afegeix aquesta opció a la llista del desplegable amb els 4 camps d\'aquí sobre.');
 
   function isEntryValid() {
     return Boolean(catInput.value.trim() && castInput.value.trim() && engInput.value.trim() && priceInput.value !== '');
@@ -161,6 +167,7 @@ function buildDesplegableSection(colIndex) {
     priceInput.value = '';
     refreshAddBtn();
     catInput.focus();
+    container.dispatchEvent(new Event('change'));
   }
 
   addBtn.addEventListener('click', addEntry);
@@ -192,5 +199,13 @@ function buildDesplegableSection(colIndex) {
   container.appendChild(table);
   container.appendChild(form);
   container.appendChild(hiddenInput);
+
+  // Cal almenys una opció afegida a la taula (el formulari de dalt, per
+  // si sol, no compta com a valor: mentre no es clica "Afegeix a la
+  // taula" no hi ha cap fila desada).
+  wireRequiredField(container, function () {
+    return items.length ? '1' : '';
+  }, 'Afegeix almenys una opció al desplegable.');
+
   return container;
 }

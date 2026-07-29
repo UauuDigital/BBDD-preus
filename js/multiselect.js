@@ -62,7 +62,11 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
   // hi surt en aquest cas (quan el text visible és un resum, no el
   // valor sencer) — en uniselecció (Any, Unit, Excepte...) o amb 1-2
   // seleccions ja es veu tot el text, no cal repetir-lo en una vinyeta.
-  const emptyLabel = placeholderText || 'Selecciona...';
+  // "" (cadena buida) és un placeholder vàlid i diferent de "no
+  // especificat" (undefined): a la taula, una cel·la buida no ha de
+  // mostrar "Selecciona..." (només té sentit quan encara no hi ha cap
+  // valor desat, com al formulari "+ Fila").
+  const emptyLabel = placeholderText === undefined ? 'Selecciona...' : placeholderText;
   function setTriggerLabel(list) {
     const isTruncated = multi && list.length > 2;
     triggerLabel.textContent = !list.length
@@ -229,7 +233,7 @@ document.addEventListener('click', function () {
   });
 });
 
-function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
+function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor, emptyLabel) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, true);
-  return buildDropdownField(colIndex, initialValue, options, true, idPrefix, undefined, getOptionColor);
+  return buildDropdownField(colIndex, initialValue, options, true, idPrefix, emptyLabel, getOptionColor);
 }

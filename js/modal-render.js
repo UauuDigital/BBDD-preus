@@ -62,7 +62,10 @@ function renderModalStep() {
       const control = def.kind === 'select'
         ? buildSelectField(colIndex, initialValue, def.options)
         : buildMultiselectField(colIndex, initialValue, def.options);
-      appendField(fieldsWrap, colIndex, def.header, control);
+      // "Unit" és obligatori un cop apareix (quantityBased marcat);
+      // "ExtresLlista" no ho és mai: deixar-lo buit és una tria vàlida
+      // (vol dir "sense desglossament"), no un oblit.
+      appendField(fieldsWrap, colIndex, def.header, control, { required: def.header === 'Unit' });
 
       if (def.header === 'ExtresLlista') {
         control.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
@@ -132,7 +135,7 @@ function updateModalNavButtons() {
 
 function handleModalNext() {
   captureStepValues();
-  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return;
+  if (!validateActiveStep()) return;
   if (isLastStep()) return;
   modalStepIndex++;
   renderModalStep();

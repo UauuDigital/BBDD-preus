@@ -22,11 +22,14 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
 
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header]);
+    // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
+    // veure buida, no amb un "Selecciona..." que no aporta res (això
+    // només té sentit al formulari, on encara no hi ha cap valor desat).
+    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildSelectField(colIndex, value, undefined, idPrefix);
+    control = buildSelectField(colIndex, value, undefined, idPrefix, undefined, '');
   } else if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
     control = buildCheckboxField(colIndex, value, idPrefix);
   } else {

@@ -22,6 +22,7 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
 
   const legend = document.createElement('legend');
   legend.textContent = 'Llindà (Principi – Final)';
+  wireHoverTooltip(legend, 'Rang de nombre de convidats (de Principi a Final) al qual s\'aplica aquest tram.');
   field.appendChild(legend);
 
   const wrap = document.createElement('div');
@@ -115,6 +116,7 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
     input.setAttribute('aria-label', header);
     input.addEventListener('input', function () { updateZoneMinWidth(input); });
     updateZoneMinWidth(input);
+    if (FIELD_HELP_TEXT[header]) wireHoverTooltip(wrap, FIELD_HELP_TEXT[header]);
 
     const suffix = document.createElement('span');
     suffix.className = 'range-dual-zone-suffix';
@@ -202,6 +204,20 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
 
   field.appendChild(wrap);
   field.appendChild(zonesRow);
+
+  // Els 3 preus són obligatoris (Principi/Final no cal comprovar-los:
+  // un <input type="range"> sempre té un valor, mai queden buits). Un
+  // sol missatge combinat, no un per input: no hi ha espai per a un
+  // paràgraf d'error sota cada input de 32px. Es crida després
+  // d'afegir wrap/zonesRow perquè el missatge quedi sota el slider,
+  // no per sobre.
+  wireRequiredField(field, function () {
+    return [zoneStart, zoneMiddle, zoneEnd].every(function (zone) {
+      const zoneInput = zone.querySelector('input');
+      return zone.hidden || (zoneInput && zoneInput.value.trim() !== '');
+    }) ? '1' : '';
+  }, 'Omple els tres preus del Llindà.');
+
   return field;
 }
 

@@ -35,6 +35,7 @@ function handleServiceNameInput(event) {
 function submitAddRowForm(event) {
   event.preventDefault();
   captureStepValues();
+  if (!validateActiveStep()) return;
 
   const values = state.headers.map(function (_, colIndex) {
     return modalValues[colIndex] !== undefined ? modalValues[colIndex] : '';

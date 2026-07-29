@@ -846,6 +846,11 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 }
 .modal-field.is-invalid .modal-field-error { display: block; }
 
+/* Camps obligatoris condicionals marcats amb wireRequiredField (vegeu
+   modal-fields.js), que no sempre tenen la classe .modal-field (p.ex.
+   la secció "Desplegable" és un .breakdown-section sencer). */
+[data-required-check="true"].is-invalid > .modal-field-error { display: block; }
+
 .modal-field.is-invalid input,
 .modal-field.is-invalid .multiselect-trigger {
   border-color: var(--color-danger);
@@ -1118,6 +1123,27 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
 .option-card:has(.option-card-input:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* Vinyeta d'ajuda reutilitzable amb position:fixed (coordenades
+   calculades en JS, vegeu wireHoverTooltip a cardfield.js): molts
+   camps del modal viuen dins .modal-fields (overflow-y:auto +
+   max-height:60vh), on una vinyeta posicionada de forma absoluta
+   quedaria tallada prop del final del pas. */
+.hover-tooltip {
+  position: fixed;
+  z-index: 40;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
 }
 
 .option-card-input {
@@ -2367,16 +2393,16 @@ function buildFilterField(def) {
 // visible=false l'amaga sense treure-la del flux (visibility, no
 // display), perquè els altres filtres no es reposicionin en aparèixer
 // o desaparèixer el botó.
+// Es treu del flux (hidden, no visibility) quan no hi ha cap filtre
+// actiu: si no, quedaria un buit reservat entre els filtres i la
+// casella "Simplifica" (que ha d'anar-hi enganxada quan no hi ha botó).
 function buildClearFiltersButton(visible) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn btn-ghost';
   btn.textContent = 'Neteja filtres';
   btn.addEventListener('click', clearAllFilters);
-  if (!visible) {
-    btn.style.visibility = 'hidden';
-    btn.tabIndex = -1;
-  }
+  btn.hidden = !visible;
   return btn;
 }
 
@@ -2459,11 +2485,14 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
 
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header]);
+    // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
+    // veure buida, no amb un "Selecciona..." que no aporta res (això
+    // només té sentit al formulari, on encara no hi ha cap valor desat).
+    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildSelectField(colIndex, value, undefined, idPrefix);
+    control = buildSelectField(colIndex, value, undefined, idPrefix, undefined, '');
   } else if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
     control = buildCheckboxField(colIndex, value, idPrefix);
   } else {
@@ -3260,7 +3289,11 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
   // hi surt en aquest cas (quan el text visible és un resum, no el
   // valor sencer) — en uniselecció (Any, Unit, Excepte...) o amb 1-2
   // seleccions ja es veu tot el text, no cal repetir-lo en una vinyeta.
-  const emptyLabel = placeholderText || 'Selecciona...';
+  // "" (cadena buida) és un placeholder vàlid i diferent de "no
+  // especificat" (undefined): a la taula, una cel·la buida no ha de
+  // mostrar "Selecciona..." (només té sentit quan encara no hi ha cap
+  // valor desat, com al formulari "+ Fila").
+  const emptyLabel = placeholderText === undefined ? 'Selecciona...' : placeholderText;
   function setTriggerLabel(list) {
     const isTruncated = multi && list.length > 2;
     triggerLabel.textContent = !list.length
@@ -3427,9 +3460,9 @@ document.addEventListener('click', function () {
   });
 });
 
-function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
+function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor, emptyLabel) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, true);
-  return buildDropdownField(colIndex, initialValue, options, true, idPrefix, undefined, getOptionColor);
+  return buildDropdownField(colIndex, initialValue, options, true, idPrefix, emptyLabel, getOptionColor);
 }
 // Capçaleres d'un sol valor que s'editen amb un desplegable uniselecció,
 // amb les opcions calculades a partir dels valors ja existents a la
@@ -3437,9 +3470,9 @@ function buildMultiselectField(colIndex, initialValue, fixedOptions, idPrefix, g
 // visual que el multiselecció (vegeu buildDropdownField a multiselect.js).
 const SELECT_HEADERS = ['Unit', 'Excepte'];
 
-function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor) {
+function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOptionColor, emptyLabel) {
   const options = fixedOptions || getDistinctColumnValues(colIndex, false);
-  return buildDropdownField(colIndex, initialValue, options, false, idPrefix, undefined, getOptionColor);
+  return buildDropdownField(colIndex, initialValue, options, false, idPrefix, emptyLabel, getOptionColor);
 }
 // Capçaleres booleanes: es mostren com a casella de verificació. El
 // valor desat a la cel·la és "TRUE"/"FALSE" (el mateix format que fa
@@ -3462,9 +3495,68 @@ function buildCheckboxField(colIndex, initialValue, idPrefix) {
 // Targeta clicable per a camps booleans (pas "Opcions"): mateixa
 // semàntica que un checkbox (es desa "TRUE"/"FALSE") però es clica la
 // targeta sencera en lloc de marcar una caseta petita.
+// Vinyeta d'ajuda reutilitzable en passar el ratolí (o amb focus de
+// teclat) per sobre de qualsevol element del modal — targetes del pas
+// "Opcions", camps del pas "Llindà"/"Desplegable"... No pot ser el
+// [data-tooltip]::before habitual (CSS pur, vegeu layout.css): aquests
+// elements viuen dins .modal-fields, que té overflow-y:auto i
+// max-height:60vh, així que una vinyeta posicionada de forma absoluta
+// quedaria tallada a prop del final del pas. Tampoc n'hi ha prou amb
+// position:fixed a seques: el <dialog> obert (showModal) es renderitza
+// en el "top layer" del navegador, per sobre de tot document.body per
+// molt z-index que hi posem, així que cal afegir-la dins del propi
+// <dialog> perquè hereti aquest mateix "top layer".
+function wireHoverTooltip(el, text) {
+  let tooltipEl = null;
+
+  function show() {
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'hover-tooltip';
+    tooltipEl.textContent = text;
+    tooltipEl.style.visibility = 'hidden';
+    (el.closest('dialog') || document.body).appendChild(tooltipEl);
+
+    const rect = el.getBoundingClientRect();
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const openBelow = spaceBelow >= tooltipRect.height || spaceBelow >= rect.top - 8;
+
+    const left = Math.min(
+      Math.max(8, rect.left + rect.width / 2 - tooltipRect.width / 2),
+      window.innerWidth - tooltipRect.width - 8
+    );
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = (openBelow ? rect.bottom + 8 : rect.top - tooltipRect.height - 8) + 'px';
+    tooltipEl.style.visibility = 'visible';
+  }
+
+  function hide() {
+    if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+  }
+
+  el.addEventListener('mouseenter', show);
+  el.addEventListener('mouseleave', hide);
+  // "focusin"/"focusout" (no "focus"/"blur", que no fan bombolla): en
+  // una targeta, qui rep el focus és el <input> de dins, no l'element
+  // en si. Només amb :focus-visible (focus real de teclat):
+  // renderModalStep() posa el focus automàticament al primer input del
+  // pas en obrir-lo (focus programàtic, no de teclat), i sense aquesta
+  // comprovació la vinyeta del primer camp quedaria oberta permanentment.
+  el.addEventListener('focusin', function (event) {
+    if (event.target.matches(':focus-visible')) show();
+  });
+  el.addEventListener('focusout', hide);
+}
+
 function buildCardToggleField(colIndex, label, initialValue) {
   const card = document.createElement('label');
   card.className = 'option-card';
+  // Mateix diccionari d'explicacions que la resta de camps (vegeu
+  // FIELD_HELP_TEXT a modal-fields.js); aquí, com que la targeta no té
+  // espai per a una icona ⓘ separada, la vinyeta surt en passar el
+  // ratolí per qualsevol punt de la targeta sencera.
+  const helpText = FIELD_HELP_TEXT[label];
+  if (helpText) wireHoverTooltip(card, helpText);
 
   const input = document.createElement('input');
   input.type = 'checkbox';
@@ -3653,6 +3745,7 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
 
   const legend = document.createElement('legend');
   legend.textContent = 'Llindà (Principi – Final)';
+  wireHoverTooltip(legend, 'Rang de nombre de convidats (de Principi a Final) al qual s\'aplica aquest tram.');
   field.appendChild(legend);
 
   const wrap = document.createElement('div');
@@ -3746,6 +3839,7 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
     input.setAttribute('aria-label', header);
     input.addEventListener('input', function () { updateZoneMinWidth(input); });
     updateZoneMinWidth(input);
+    if (FIELD_HELP_TEXT[header]) wireHoverTooltip(wrap, FIELD_HELP_TEXT[header]);
 
     const suffix = document.createElement('span');
     suffix.className = 'range-dual-zone-suffix';
@@ -3833,6 +3927,20 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
 
   field.appendChild(wrap);
   field.appendChild(zonesRow);
+
+  // Els 3 preus són obligatoris (Principi/Final no cal comprovar-los:
+  // un <input type="range"> sempre té un valor, mai queden buits). Un
+  // sol missatge combinat, no un per input: no hi ha espai per a un
+  // paràgraf d'error sota cada input de 32px. Es crida després
+  // d'afegir wrap/zonesRow perquè el missatge quedi sota el slider,
+  // no per sobre.
+  wireRequiredField(field, function () {
+    return [zoneStart, zoneMiddle, zoneEnd].every(function (zone) {
+      const zoneInput = zone.querySelector('input');
+      return zone.hidden || (zoneInput && zoneInput.value.trim() !== '');
+    }) ? '1' : '';
+  }, 'Omple els tres preus del Llindà.');
+
   return field;
 }
 
@@ -3960,6 +4068,7 @@ function buildDesplegableSection(colIndex) {
         items.splice(index, 1);
         hiddenInput.value = JSON.stringify(items);
         renderRows();
+        container.dispatchEvent(new Event('change'));
       });
       tdActions.appendChild(removeBtn);
       tr.appendChild(tdActions);
@@ -3974,14 +4083,17 @@ function buildDesplegableSection(colIndex) {
   const catInput = document.createElement('input');
   catInput.type = 'text';
   catInput.placeholder = 'Català';
+  wireHoverTooltip(catInput, 'Nom de l\'opció en català. Si l\'escrius aquí, es tradueix sol a Castellà i Anglès.');
 
   const castInput = document.createElement('input');
   castInput.type = 'text';
   castInput.placeholder = 'Castellà';
+  wireHoverTooltip(castInput, 'Traducció al castellà (es genera sola en escriure el nom en català, però es pot editar a mà).');
 
   const engInput = document.createElement('input');
   engInput.type = 'text';
   engInput.placeholder = 'Anglès';
+  wireHoverTooltip(engInput, 'Traducció a l\'anglès (es genera sola en escriure el nom en català, però es pot editar a mà).');
 
   const priceWrap = document.createElement('div');
   priceWrap.className = 'currency-field';
@@ -3989,6 +4101,7 @@ function buildDesplegableSection(colIndex) {
   priceInput.type = 'number';
   priceInput.step = '0.01';
   priceInput.placeholder = 'Preu';
+  wireHoverTooltip(priceWrap, 'Preu d\'aquesta opció del desplegable.');
   const priceSuffix = document.createElement('span');
   priceSuffix.className = 'currency-suffix';
   priceSuffix.textContent = '€';
@@ -3999,6 +4112,7 @@ function buildDesplegableSection(colIndex) {
   addBtn.type = 'button';
   addBtn.className = 'btn btn-primary';
   addBtn.textContent = 'Afegeix a la taula';
+  wireHoverTooltip(addBtn, 'Afegeix aquesta opció a la llista del desplegable amb els 4 camps d\'aquí sobre.');
 
   function isEntryValid() {
     return Boolean(catInput.value.trim() && castInput.value.trim() && engInput.value.trim() && priceInput.value !== '');
@@ -4022,6 +4136,7 @@ function buildDesplegableSection(colIndex) {
     priceInput.value = '';
     refreshAddBtn();
     catInput.focus();
+    container.dispatchEvent(new Event('change'));
   }
 
   addBtn.addEventListener('click', addEntry);
@@ -4053,6 +4168,14 @@ function buildDesplegableSection(colIndex) {
   container.appendChild(table);
   container.appendChild(form);
   container.appendChild(hiddenInput);
+
+  // Cal almenys una opció afegida a la taula (el formulari de dalt, per
+  // si sol, no compta com a valor: mentre no es clica "Afegeix a la
+  // taula" no hi ha cap fila desada).
+  wireRequiredField(container, function () {
+    return items.length ? '1' : '';
+  }, 'Afegeix almenys una opció al desplegable.');
+
   return container;
 }
 // Pas 5 (condicional): secció "Input Númeric" (Unitat + Preu, desat a
@@ -4087,7 +4210,12 @@ function buildInputNumericSection(colIndex) {
   unitatInput.type = 'text';
   unitatInput.value = current.Unitat;
   unitatInput.addEventListener('input', sync);
-  appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
+  const unitatField = appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
+  // Unitat i Preu comparteixen un únic colIndex real (ExtraUnitat es
+  // desa combinat com "Unitat,Preu"): el mecanisme d'obligatorietat
+  // d'appendField (basat en data-col-index) no els pot distingir, cal
+  // wireRequiredField amb el valor de cada input llegit directament.
+  wireRequiredField(unitatField, function () { return unitatInput.value; });
 
   const preuWrap = document.createElement('div');
   preuWrap.className = 'currency-field';
@@ -4101,7 +4229,8 @@ function buildInputNumericSection(colIndex) {
   preuSuffix.textContent = '€';
   preuWrap.appendChild(preuInput);
   preuWrap.appendChild(preuSuffix);
-  appendField(fieldsGrid, colIndex, 'Preu', preuWrap);
+  const preuField = appendField(fieldsGrid, colIndex, 'Preu', preuWrap);
+  wireRequiredField(preuField, function () { return preuInput.value; });
 
   sync();
   container.appendChild(fieldsGrid);
@@ -4116,6 +4245,7 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
   const heading = document.createElement('h4');
   heading.className = 'switch-option-heading';
   heading.textContent = label;
+  wireHoverTooltip(heading, 'Una de les dues alternatives entre les quals la persona convidada podrà triar.');
   group.appendChild(heading);
 
   const fieldsGrid = document.createElement('div');
@@ -4123,10 +4253,10 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
   const langInputs = [];
 
   [
-    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca' },
-    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es' },
-    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en' },
-    { key: 'PREU', label: 'Preu', type: 'currency' },
+    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca', help: 'Nom d\'aquesta opció en català. Si l\'escrius aquí, es tradueix sol a Castellà i Anglès.' },
+    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es', help: 'Traducció al castellà (es genera sola en escriure el nom en català, però es pot editar a mà).' },
+    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en', help: 'Traducció a l\'anglès (es genera sola en escriure el nom en català, però es pot editar a mà).' },
+    { key: 'PREU', label: 'Preu', type: 'currency', help: 'Preu d\'aquesta opció.' },
   ].forEach(function (def) {
     const fieldId = idPrefix + def.key;
     let control;
@@ -4170,8 +4300,15 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
     const fieldLabel = document.createElement('label');
     fieldLabel.textContent = def.label;
     fieldLabel.setAttribute('for', fieldId);
+    if (def.help) wireHoverTooltip(field, def.help);
     field.appendChild(fieldLabel);
     field.appendChild(control);
+    // Els 8 camps (2 opcions × CAT/CAST/ENG/PREU) comparteixen tots un
+    // únic colIndex real (es desen combinats a ExtraSwitch), així que
+    // cal wireRequiredField amb el valor de cada input concret.
+    wireRequiredField(field, function () {
+      return control.matches('input') ? control.value : control.querySelector('input').value;
+    });
     fieldsGrid.appendChild(field);
   });
 
@@ -4429,6 +4566,13 @@ const FIELD_HELP_TEXT = {
   'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
   'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
   'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
+  'Desplegable': 'Marca-ho si aquest servei ofereix un desplegable d\'opcions amb preus diferents (es configura al pas de desglossament).',
+  'Unit': 'Si el preu és per persona o per pack sencer (packs fixos, independentment del nombre de persones).',
+  'ExtresLlista': 'Quins tipus d\'extra vols configurar per a aquest servei: desplegable d\'opcions, llindars per trams, o altres extres addicionals.',
+  'ExtraExtresLlista': 'Quin tipus d\'extra addicional vols configurar: un camp numèric amb preu (Input Numèric) o dues opcions alternatives amb preu cada una (Switch).',
+  'Unitat': 'Nom de la unitat que es multiplica pel preu (p.ex. "hora", "m2", "persona addicional").',
+  'Llindà preu X<0': 'Preu per convidat quan el nombre de convidats és per sota del "Principi" d\'aquest tram.',
+  'Llindà preu 0<X': 'Preu per convidat quan el nombre de convidats és per sobre del "Final" d\'aquest tram.',
   'Dia': 'Dia(es) de la setmana als quals s\'aplica. Buit = tots els dies.',
   'Mes': 'Mes(os) als quals s\'aplica. Buit = tots els mesos.',
   'Excepte': 'Data concreta que queda exclosa d\'aquesta regla (p.ex. un festiu).',
@@ -4522,6 +4666,80 @@ function appendField(container, colIndex, label, control, options) {
   }
 
   container.appendChild(field);
+  return field;
+}
+
+// Camps obligatoris condicionals fora del pas "Informació general"
+// (p.ex. "Unit" si "quantityBased" és cert, els preus del Llindà si
+// s'ha triat, els camps del Switch...): quan el control té un colIndex
+// real i propi, appendField(..., {required:true}) ja n'hi ha prou. Però
+// alguns camps són compostos (el Switch desa 8 valors en un únic
+// colIndex; el Llindà i l'Input Numèric barregen diversos inputs sota
+// un mateix colIndex combinat): aquí getFieldControlValue (basat en
+// colIndex) no pot distingir-los, així que es marquen amb
+// wireRequiredField, que guarda la seva pròpia manera de llegir el
+// valor en lloc de dependre de data-col-index.
+function wireRequiredField(field, getValue, errorMessage) {
+  field.classList.add('is-required-check');
+  field.dataset.requiredCheck = 'true';
+  field._getRequiredValue = getValue;
+
+  const error = document.createElement('p');
+  error.className = 'modal-field-error';
+  error.textContent = errorMessage || 'Aquest camp és obligatori.';
+  field.appendChild(error);
+
+  function clearInvalid() {
+    if (getValue().trim() === '') return;
+    field.classList.remove('is-invalid');
+  }
+  field.addEventListener('input', clearInvalid);
+  field.addEventListener('change', clearInvalid);
+}
+
+// Comprova tots els camps obligatoris (dels dos mecanismes anteriors)
+// dins el contenidor donat, marca visualment els buits i retorna si es
+// pot avançar de pas.
+function validateRequiredFieldsIn(container) {
+  let allValid = true;
+  let firstInvalidField = null;
+
+  function markInvalid(fieldEl, isEmpty, ariaTarget) {
+    fieldEl.classList.toggle('is-invalid', isEmpty);
+    if (ariaTarget) ariaTarget.setAttribute('aria-invalid', isEmpty ? 'true' : 'false');
+    if (isEmpty) {
+      allValid = false;
+      if (!firstInvalidField) firstInvalidField = fieldEl;
+    }
+  }
+
+  container.querySelectorAll('.modal-field[data-field-index]').forEach(function (fieldEl) {
+    const ariaTarget = getFieldAriaTarget(fieldEl);
+    if (!ariaTarget || ariaTarget.getAttribute('aria-required') !== 'true') return;
+    const colIndex = Number(fieldEl.dataset.fieldIndex);
+    const disabledControl = fieldEl.querySelector('.multiselect-trigger:disabled');
+    const isEmpty = !disabledControl && getFieldControlValue(colIndex).trim() === '';
+    markInvalid(fieldEl, isEmpty, ariaTarget);
+  });
+
+  container.querySelectorAll('[data-required-check="true"]').forEach(function (fieldEl) {
+    markInvalid(fieldEl, fieldEl._getRequiredValue().trim() === '', null);
+  });
+
+  if (firstInvalidField) {
+    const focusable = firstInvalidField.querySelector('input:not([type="hidden"]), .multiselect-trigger');
+    (focusable || firstInvalidField).focus();
+  }
+  return allValid;
+}
+
+// Punt d'entrada únic cridat abans d'avançar de pas o de desar: el pas
+// "Informació general" té la seva pròpia validació (requiredHeaders
+// per columna real); qualsevol altre pas fa servir el mecanisme
+// genèric anterior.
+function validateActiveStep() {
+  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return false;
+  return validateRequiredFieldsIn(document.getElementById('addRowFields'));
 }
 
 // Valida el pas "Informació general": tots els camps hi són obligatoris
@@ -4643,7 +4861,10 @@ function renderModalStep() {
       const control = def.kind === 'select'
         ? buildSelectField(colIndex, initialValue, def.options)
         : buildMultiselectField(colIndex, initialValue, def.options);
-      appendField(fieldsWrap, colIndex, def.header, control);
+      // "Unit" és obligatori un cop apareix (quantityBased marcat);
+      // "ExtresLlista" no ho és mai: deixar-lo buit és una tria vàlida
+      // (vol dir "sense desglossament"), no un oblit.
+      appendField(fieldsWrap, colIndex, def.header, control, { required: def.header === 'Unit' });
 
       if (def.header === 'ExtresLlista') {
         control.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
@@ -4713,7 +4934,7 @@ function updateModalNavButtons() {
 
 function handleModalNext() {
   captureStepValues();
-  if (modalStepIndex === STEP_GENERAL && !validateStepGeneral()) return;
+  if (!validateActiveStep()) return;
   if (isLastStep()) return;
   modalStepIndex++;
   renderModalStep();
@@ -4762,6 +4983,7 @@ function handleServiceNameInput(event) {
 function submitAddRowForm(event) {
   event.preventDefault();
   captureStepValues();
+  if (!validateActiveStep()) return;
 
   const values = state.headers.map(function (_, colIndex) {
     return modalValues[colIndex] !== undefined ? modalValues[colIndex] : '';

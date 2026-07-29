@@ -30,7 +30,12 @@ function buildInputNumericSection(colIndex) {
   unitatInput.type = 'text';
   unitatInput.value = current.Unitat;
   unitatInput.addEventListener('input', sync);
-  appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
+  const unitatField = appendField(fieldsGrid, colIndex, 'Unitat', unitatInput);
+  // Unitat i Preu comparteixen un únic colIndex real (ExtraUnitat es
+  // desa combinat com "Unitat,Preu"): el mecanisme d'obligatorietat
+  // d'appendField (basat en data-col-index) no els pot distingir, cal
+  // wireRequiredField amb el valor de cada input llegit directament.
+  wireRequiredField(unitatField, function () { return unitatInput.value; });
 
   const preuWrap = document.createElement('div');
   preuWrap.className = 'currency-field';
@@ -44,7 +49,8 @@ function buildInputNumericSection(colIndex) {
   preuSuffix.textContent = '€';
   preuWrap.appendChild(preuInput);
   preuWrap.appendChild(preuSuffix);
-  appendField(fieldsGrid, colIndex, 'Preu', preuWrap);
+  const preuField = appendField(fieldsGrid, colIndex, 'Preu', preuWrap);
+  wireRequiredField(preuField, function () { return preuInput.value; });
 
   sync();
   container.appendChild(fieldsGrid);
@@ -59,6 +65,7 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
   const heading = document.createElement('h4');
   heading.className = 'switch-option-heading';
   heading.textContent = label;
+  wireHoverTooltip(heading, 'Una de les dues alternatives entre les quals la persona convidada podrà triar.');
   group.appendChild(heading);
 
   const fieldsGrid = document.createElement('div');
@@ -66,10 +73,10 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
   const langInputs = [];
 
   [
-    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca' },
-    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es' },
-    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en' },
-    { key: 'PREU', label: 'Preu', type: 'currency' },
+    { key: 'CAT', label: 'Català', type: 'text', lang: 'ca', help: 'Nom d\'aquesta opció en català. Si l\'escrius aquí, es tradueix sol a Castellà i Anglès.' },
+    { key: 'CAST', label: 'Castellà', type: 'text', lang: 'es', help: 'Traducció al castellà (es genera sola en escriure el nom en català, però es pot editar a mà).' },
+    { key: 'ENG', label: 'Anglès', type: 'text', lang: 'en', help: 'Traducció a l\'anglès (es genera sola en escriure el nom en català, però es pot editar a mà).' },
+    { key: 'PREU', label: 'Preu', type: 'currency', help: 'Preu d\'aquesta opció.' },
   ].forEach(function (def) {
     const fieldId = idPrefix + def.key;
     let control;
@@ -113,8 +120,15 @@ function buildSwitchOptionGroup(idPrefix, label, optionData, onChange) {
     const fieldLabel = document.createElement('label');
     fieldLabel.textContent = def.label;
     fieldLabel.setAttribute('for', fieldId);
+    if (def.help) wireHoverTooltip(field, def.help);
     field.appendChild(fieldLabel);
     field.appendChild(control);
+    // Els 8 camps (2 opcions × CAT/CAST/ENG/PREU) comparteixen tots un
+    // únic colIndex real (es desen combinats a ExtraSwitch), així que
+    // cal wireRequiredField amb el valor de cada input concret.
+    wireRequiredField(field, function () {
+      return control.matches('input') ? control.value : control.querySelector('input').value;
+    });
     fieldsGrid.appendChild(field);
   });
 

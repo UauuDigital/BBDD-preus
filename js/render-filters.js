@@ -38,16 +38,16 @@ function buildFilterField(def) {
 // visible=false l'amaga sense treure-la del flux (visibility, no
 // display), perquè els altres filtres no es reposicionin en aparèixer
 // o desaparèixer el botó.
+// Es treu del flux (hidden, no visibility) quan no hi ha cap filtre
+// actiu: si no, quedaria un buit reservat entre els filtres i la
+// casella "Simplifica" (que ha d'anar-hi enganxada quan no hi ha botó).
 function buildClearFiltersButton(visible) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn btn-ghost';
   btn.textContent = 'Neteja filtres';
   btn.addEventListener('click', clearAllFilters);
-  if (!visible) {
-    btn.style.visibility = 'hidden';
-    btn.tabIndex = -1;
-  }
+  btn.hidden = !visible;
   return btn;
 }
 

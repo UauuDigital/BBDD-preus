@@ -87,6 +87,27 @@
   outline-offset: 2px;
 }
 
+/* Vinyeta d'ajuda reutilitzable amb position:fixed (coordenades
+   calculades en JS, vegeu wireHoverTooltip a cardfield.js): molts
+   camps del modal viuen dins .modal-fields (overflow-y:auto +
+   max-height:60vh), on una vinyeta posicionada de forma absoluta
+   quedaria tallada prop del final del pas. */
+.hover-tooltip {
+  position: fixed;
+  z-index: 40;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
 .option-card-input {
   position: absolute;
   width: 1px;
