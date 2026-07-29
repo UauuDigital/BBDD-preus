@@ -216,7 +216,11 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
       const zoneInput = zone.querySelector('input');
       return zone.hidden || (zoneInput && zoneInput.value.trim() !== '');
     }) ? '1' : '';
-  }, 'Omple els tres preus del Llindà.');
+  }, 'Omple els tres preus del Llindà.',
+  // Si "Llindà preu X<0" no existeix en aquest full, cau al primer
+  // input real que sí hi hagi (mai queden els 3 amagats alhora, ja que
+  // "Preu" sempre hi és).
+  zoneStart.querySelector('input') || zoneMiddle.querySelector('input') || zoneEnd.querySelector('input'));
 
   return field;
 }

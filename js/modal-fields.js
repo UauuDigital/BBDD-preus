@@ -173,19 +173,39 @@ function appendField(container, colIndex, label, control, options) {
 // colIndex) no pot distingir-los, així que es marquen amb
 // wireRequiredField, que guarda la seva pròpia manera de llegir el
 // valor en lloc de dependre de data-col-index.
-function wireRequiredField(field, getValue, errorMessage) {
+let requiredCheckCounter = 0;
+// ariaTarget: control que ha de rebre aria-required/aria-invalid. Per
+// defecte, el primer input real de dins del camp — però quan el camp
+// conté més d'un control (com el <fieldset> del Llindà, amb els
+// cursors del slider ABANS dels 3 preus reals) cal indicar-lo
+// explícitament, o s'acabaria marcant el control equivocat. Si no n'hi
+// ha cap de sensible (p.ex. "Desplegable", que valida una llista
+// sencera, no un únic input), es passa null a consciència: l'error
+// visible i el bloqueig d'avançar de pas es mantenen, però sense
+// aria-required/aria-invalid (no hi ha cap control únic a què associar-los).
+function wireRequiredField(field, getValue, errorMessage, ariaTarget) {
   field.classList.add('is-required-check');
   field.dataset.requiredCheck = 'true';
   field._getRequiredValue = getValue;
 
+  const errorId = 'requiredCheckError' + (requiredCheckCounter++);
   const error = document.createElement('p');
   error.className = 'modal-field-error';
+  error.id = errorId;
   error.textContent = errorMessage || 'Aquest camp és obligatori.';
   field.appendChild(error);
+
+  const target = ariaTarget !== undefined ? ariaTarget : field.querySelector('input:not([type="hidden"]), .multiselect-trigger');
+  if (target) {
+    target.setAttribute('aria-required', 'true');
+    target.setAttribute('aria-describedby', errorId);
+  }
+  field._requiredAriaTarget = target;
 
   function clearInvalid() {
     if (getValue().trim() === '') return;
     field.classList.remove('is-invalid');
+    if (target) target.setAttribute('aria-invalid', 'false');
   }
   field.addEventListener('input', clearInvalid);
   field.addEventListener('change', clearInvalid);
@@ -217,7 +237,7 @@ function validateRequiredFieldsIn(container) {
   });
 
   container.querySelectorAll('[data-required-check="true"]').forEach(function (fieldEl) {
-    markInvalid(fieldEl, fieldEl._getRequiredValue().trim() === '', null);
+    markInvalid(fieldEl, fieldEl._getRequiredValue().trim() === '', fieldEl._requiredAriaTarget);
   });
 
   if (firstInvalidField) {

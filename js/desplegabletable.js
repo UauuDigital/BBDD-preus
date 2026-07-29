@@ -51,6 +51,12 @@ function parseDesplegableItems(raw) {
 function buildDesplegableSection(colIndex) {
   const container = document.createElement('div');
   container.className = 'breakdown-section';
+  // "group" (no un camp de formulari real) perquè pugui rebre
+  // aria-invalid quan la llista és buida: sense cap rol, un lector de
+  // pantalla no anunciaria mai aquest estat (vegeu wireRequiredField
+  // més avall, on es passa el propi contenidor com a ariaTarget).
+  container.setAttribute('role', 'group');
+  container.setAttribute('aria-label', 'Llista d\'opcions del desplegable');
 
   const heading = document.createElement('h3');
   heading.className = 'section-heading';
@@ -202,10 +208,13 @@ function buildDesplegableSection(colIndex) {
 
   // Cal almenys una opció afegida a la taula (el formulari de dalt, per
   // si sol, no compta com a valor: mentre no es clica "Afegeix a la
-  // taula" no hi ha cap fila desada).
+  // taula" no hi ha cap fila desada). El propi "container" (role=group)
+  // com a ariaTarget, no el catInput per defecte: qui és realment
+  // obligatori/invàlid és la llista sencera, no el formulari per
+  // afegir-hi una fila nova.
   wireRequiredField(container, function () {
     return items.length ? '1' : '';
-  }, 'Afegeix almenys una opció al desplegable.');
+  }, 'Afegeix almenys una opció al desplegable.', container);
 
   return container;
 }
