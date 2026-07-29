@@ -75,8 +75,8 @@ function performDeleteRow(rowIndex) {
 }
 
 function handleDeleteRow(rowIndex) {
-  const label = state.rows[rowIndex][0] || ('fila ' + (rowIndex + 1));
-  confirmDelete('Segur que vols esborrar "' + label + '"? Aquesta acció no es pot desfer.').then(function (confirmed) {
+  const label = getRowLabel(rowIndex);
+  confirmDelete(['Segur que vols esborrar "', { bold: label }, '"? Aquesta acció no es pot desfer.']).then(function (confirmed) {
     if (confirmed) performDeleteRow(rowIndex);
   });
 }

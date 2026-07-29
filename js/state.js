@@ -14,6 +14,20 @@ function isDataHeader(header) {
   return String(header == null ? '' : header).trim() === DATA_HEADER;
 }
 
+// Text identificatiu d'una fila per mostrar a l'usuari (p.ex. en
+// confirmar un esborrat): mai l'Id autogenerat, que no diu res a
+// ningú. "Nom Servei" quan el full en té (Serveis/Extres Còctel); si
+// no, "DATA" (ja és una descripció generada, útil als fulls de
+// calendari); si tampoc, un "fila N" genèric.
+function getRowLabel(rowIndex) {
+  const row = state.rows[rowIndex];
+  const nameColIndex = state.headers.indexOf('Nom Servei');
+  if (nameColIndex !== -1 && row[nameColIndex]) return row[nameColIndex];
+  const dataColIndex = state.headers.findIndex(isDataHeader);
+  if (dataColIndex !== -1 && row[dataColIndex]) return row[dataColIndex];
+  return 'fila ' + (rowIndex + 1);
+}
+
 /* Etiquetes i explicacions llegibles per a cada pestanya del Sheet.
    Els noms de full (claus) no es toquen — només com es mostren aquí.
    Si un full no hi surt (o li canvies el nom a Google Sheets), es mostra

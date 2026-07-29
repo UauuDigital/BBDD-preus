@@ -1795,6 +1795,20 @@ function isDataHeader(header) {
   return String(header == null ? '' : header).trim() === DATA_HEADER;
 }
 
+// Text identificatiu d'una fila per mostrar a l'usuari (p.ex. en
+// confirmar un esborrat): mai l'Id autogenerat, que no diu res a
+// ningú. "Nom Servei" quan el full en té (Serveis/Extres Còctel); si
+// no, "DATA" (ja és una descripció generada, útil als fulls de
+// calendari); si tampoc, un "fila N" genèric.
+function getRowLabel(rowIndex) {
+  const row = state.rows[rowIndex];
+  const nameColIndex = state.headers.indexOf('Nom Servei');
+  if (nameColIndex !== -1 && row[nameColIndex]) return row[nameColIndex];
+  const dataColIndex = state.headers.findIndex(isDataHeader);
+  if (dataColIndex !== -1 && row[dataColIndex]) return row[dataColIndex];
+  return 'fila ' + (rowIndex + 1);
+}
+
 /* Etiquetes i explicacions llegibles per a cada pestanya del Sheet.
    Els noms de full (claus) no es toquen — només com es mostren aquí.
    Si un full no hi surt (o li canvies el nom a Google Sheets), es mostra
@@ -4747,10 +4761,25 @@ function submitNewRow(values) {
 // lloc del confirm() natiu del navegador: aquest no es pot estilitzar,
 // bloqueja el fil principal i no permet mostrar context (p.ex. quina
 // fila concreta s'esborrarà) més enllà d'un únic missatge pla.
+//
+// "message" pot ser un text pla o un array de trossos (strings i/o
+// { bold: text }, p.ex. el nom de la fila) que es construeixen amb
+// crides DOM directes (textContent / <strong>), mai innerHTML: així no
+// cal escapar res encara que el text vingui d'una cel·la del full.
 function confirmDelete(message, confirmLabel) {
   return new Promise(function (resolve) {
     const dialog = document.getElementById('confirmDialog');
-    document.getElementById('confirmMessage').textContent = message;
+    const messageEl = document.getElementById('confirmMessage');
+    messageEl.innerHTML = '';
+    (Array.isArray(message) ? message : [message]).forEach(function (part) {
+      if (part && typeof part === 'object' && 'bold' in part) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.bold;
+        messageEl.appendChild(strong);
+      } else {
+        messageEl.appendChild(document.createTextNode(part));
+      }
+    });
     const okBtn = document.getElementById('confirmOkBtn');
     const cancelBtn = document.getElementById('confirmCancelBtn');
     okBtn.textContent = confirmLabel || 'Esborra';
@@ -4851,8 +4880,8 @@ function performDeleteRow(rowIndex) {
 }
 
 function handleDeleteRow(rowIndex) {
-  const label = state.rows[rowIndex][0] || ('fila ' + (rowIndex + 1));
-  confirmDelete('Segur que vols esborrar "' + label + '"? Aquesta acció no es pot desfer.').then(function (confirmed) {
+  const label = getRowLabel(rowIndex);
+  confirmDelete(['Segur que vols esborrar "', { bold: label }, '"? Aquesta acció no es pot desfer.']).then(function (confirmed) {
     if (confirmed) performDeleteRow(rowIndex);
   });
 }
