@@ -12,10 +12,20 @@
 // en el "top layer" del navegador, per sobre de tot document.body per
 // molt z-index que hi posem, així que cal afegir-la dins del propi
 // <dialog> perquè hereti aquest mateix "top layer".
+// Vinyeta oberta actualment (com a molt una a la vegada, com ja fan
+// els desplegables — vegeu document.addEventListener('click', ...) a
+// multiselect.js): en canviar el focus molt de pressa entre camps
+// (p.ex. clic seguit de teclejar tot d'una), "mouseleave"/"focusout"
+// del camp anterior no sempre arriba abans que "mouseenter"/"focusin"
+// del següent, i sense tancar-la explícitament es podien acumular
+// varies vinyetes obertes alhora.
+let openTooltipHide = null;
+
 function wireHoverTooltip(el, text) {
   let tooltipEl = null;
 
   function show() {
+    if (openTooltipHide) openTooltipHide();
     tooltipEl = document.createElement('div');
     tooltipEl.className = 'hover-tooltip';
     tooltipEl.textContent = text;
@@ -34,10 +44,12 @@ function wireHoverTooltip(el, text) {
     tooltipEl.style.left = left + 'px';
     tooltipEl.style.top = (openBelow ? rect.bottom + 8 : rect.top - tooltipRect.height - 8) + 'px';
     tooltipEl.style.visibility = 'visible';
+    openTooltipHide = hide;
   }
 
   function hide() {
     if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+    if (openTooltipHide === hide) openTooltipHide = null;
   }
 
   el.addEventListener('mouseenter', show);
