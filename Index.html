@@ -462,7 +462,12 @@ button, input {
   background: var(--bg-page);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  max-height: calc(100vh - 220px);
+  /* Prou petita perquè la barra de scroll horitzontal (al peu de
+     .table-wrap) quedi sempre dins del viewport amb la pàgina desplaçada
+     a dalt de tot, sense que calgui fer scroll vertical de la pàgina
+     sencera per arribar-hi. 280px (no 220px) deixa marge per a la
+     capçalera, pestanyes, filtres i barra d'eines de sobre. */
+  max-height: calc(100vh - 280px);
 }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--text-base); }
@@ -602,6 +607,13 @@ tr:hover .icon-btn,
   .icon-btn { width: 44px; height: 44px; }
 }
 
+/* Columnes booleanes (CHECKBOX_HEADERS): ".checkbox-field" (definit a
+   modal-fields-extra.css) ja és flex, però sense "justify-content" hi
+   queda arran de l'esquerra de la cel·la; només es centra dins la
+   taula (descendent de td), no al modal, on segueix arran del label
+   com sempre. */
+td .checkbox-field { justify-content: center; }
+
 .cell-input {
   width: 100%;
   border: none;
@@ -656,10 +668,62 @@ td .multiselect-trigger.is-open .multiselect-trigger-chevron {
   opacity: 1;
 }
 
+/* Cel·la de la columna "Desplegable": un botó, no un input, ja que no
+   s'hi escriu directament (obre el diàleg d'edició de la llista).
+   Mateix llenguatge visual que .cell-input/.multiselect-trigger: flush
+   a la cel·la, sense vora pròpia, es marca en passar-hi el ratolí. */
+.desplegable-cell-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  text-align: left;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+tr:hover .desplegable-cell-btn { background: var(--bg-surface); }
+.desplegable-cell-btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  background: var(--bg-page);
+}
+
 .row-actions-col { width: 116px; min-width: 116px; }
 td.row-actions-col, th.row-actions-col { text-align: center; }
 td.row-actions-col { padding: 0 var(--space-2); white-space: nowrap; }
 td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
+
+/* Sempre visible en fer scroll horitzontal (selecció/duplicar/esborrar
+   són accions que s'han de poder fer des de qualsevol columna en què
+   s'estigui mirant, no només des de l'esquerra de tot). Fons opac
+   propi (no transparent): en quedar per sobre de la resta de cel·les
+   en fer scroll, sense fons es veurien les altres columnes a través.
+   th.row-actions-col ja té sticky top (thead th, més amunt): aquí
+   només s'hi afegeix "left", i es puja el z-index perquè guanyi tant
+   a les cel·les normals (que no en tenen) com als altres th (z-index:1)
+   quan totes dues stickies coincideixen a la cantonada superior
+   esquerra. La vora dreta és un ::after propi, no el border-right
+   habitual ni un box-shadow: amb border-collapse:collapse (més amunt),
+   el navegador pinta les vores col·lapsades amb el seu propi mecanisme
+   (no com una capa normal de l'element), que ignora "position: sticky"
+   — tant el border com el box-shadow desapareixen o es tallen en fer
+   scroll. Un pseudo-element absolut, en canvi, és una capa normal més
+   dins de l'element sticky, així que sempre es queda enganxat amb ell. */
+td.row-actions-col, th.row-actions-col { position: sticky; left: 0; }
+td.row-actions-col { z-index: 1; background: var(--bg-page); }
+th.row-actions-col { z-index: 2; }
+td.row-actions-col::after, th.row-actions-col::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-default);
+}
 
 /* A tàctil, .icon-btn puja a 44×44 (vegeu més avall): casella + 2
    botons ja no caben en els 116px pensats per a ratolí, i quedarien
@@ -682,6 +746,60 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
    llarga, MÍN/PREU/P/Any són valors curts. */
 .col-wide { min-width: 320px; }
 .col-narrow { width: 90px; min-width: 90px; }
+
+/* Columna fusionada "Llindà" (Principi/Final + els 2 preus en una de
+   sola, vegeu getLlindaMergeStart a llindasection.js): necessita més
+   amplada que una columna normal perquè hi càpiga el mateix gràfic de
+   slider que al formulari de nova fila. El propi component ja porta
+   l'estil de ".modal-field.range-dual-field" (modal-breakdown.css),
+   vàlid també fora del modal perquè és un selector de classe, no
+   d'ascendència. */
+/* Sense padding propi (com la resta de td/th, regla general més
+   amunt): el porta ".llinda-disclosure-toggle"/".llinda-disclosure-body"
+   de dins, igual que ".cell-input" el porta a les altres columnes. Si
+   la td també en tingués, s'hi sumarien tots dos i la fila (fins i tot
+   col·lapsada) quedaria més alta que la resta. */
+.llinda-cell { min-width: 420px; }
+/* Al modal hi ha marge de sobres per a l'espaiat entre el slider i els
+   preus; en una fila de taula (una entre moltes) cal quedar-se prim.
+   No es toca el marge superior del slider (--space-*, reservat per a
+   la bombolla de valor que hi flota a sobre: sense ell, es tallaria). */
+.llinda-cell .range-dual-zones { margin-top: var(--space-1); }
+
+/* Desplegable per fila del Llindà (buildLlindaTableCellControl,
+   llindasection.js): col·lapsat per defecte, mateixa alçada que una
+   cel·la normal; només en obrir-lo creix la fila per encabir el
+   gràfic. Mateix llenguatge visual que .cell-input (flush a la
+   cel·la, es marca en passar-hi el ratolí). */
+.llinda-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+tr:hover .llinda-disclosure-toggle { background: var(--bg-surface); }
+.llinda-disclosure-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  background: var(--bg-page);
+}
+.llinda-disclosure-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--fg-tertiary);
+  transition: transform var(--duration) var(--ease-out);
+}
+/* Mateix conveni que ".multiselect-trigger-chevron" (modal-multiselect.css):
+   tancat = cap avall (sense rotar), obert = rotat 180° (cap amunt). */
+.llinda-disclosure-chevron.is-open { transform: rotate(180deg); }
+.llinda-disclosure-body { padding: 0 var(--space-3) var(--space-2); }
 
 /* ---------------------------------------------------------
    Empty & skeleton states
@@ -1231,23 +1349,17 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
   color: var(--fg-secondary);
 }
 
-/* El control de doble cursor és un <fieldset>/<legend> (no un <div>/
-   <label>, com la resta de camps): els dos <input type="range"> no
-   tenen un únic control al qual associar un <label for>. Cal resetejar
-   l'estil natiu del navegador i replicar el de ".modal-field label". */
+/* El control de doble cursor és un <fieldset> sense <legend> (no un
+   <div>/<label>, com la resta de camps): els dos <input type="range">
+   no tenen un únic control al qual associar un <label for>, i el nom
+   "Llindà" ja hi és com a capçalera (de secció al modal, de columna a
+   la taula), així que no cal repetir-lo aquí. Cal resetejar l'estil
+   natiu del navegador. */
 .modal-field.range-dual-field {
   border: none;
   margin: 0;
   padding: 0;
   min-width: 0;
-}
-.modal-field.range-dual-field legend {
-  display: block;
-  padding: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--fg-secondary);
-  margin-bottom: var(--space-2);
 }
 
 /* Slider de doble cursor (Llindà Principi/Final): dos <input
@@ -1368,6 +1480,38 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
   transform: translateX(-50%);
   border: 4px solid transparent;
   border-top-color: var(--color-ink);
+}
+/* L'input dins la bombolla: cap vora ni fons propis (hereta els de la
+   bombolla), text blanc igual que abans quan era text estàtic. Amplada
+   fixada des de JS (updateBubbleWidth), sense mínim propi. Especificitat
+   ".range-dual-bubble .range-dual-bubble-input" (no només la classe
+   sola): cal guanyar per sobre de ".modal-field input" (modal.css), que
+   altrament hi torna a posar vora, fons i padding sòlids (és el que la
+   feia veure massa grossa). */
+.range-dual-bubble .range-dual-bubble-input {
+  width: 1ch;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  pointer-events: auto;
+  cursor: text;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.range-dual-bubble-input::-webkit-inner-spin-button,
+.range-dual-bubble-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.range-dual-bubble .range-dual-bubble-input:focus {
+  outline: 1px solid var(--color-white);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 /* Un input numèric per cadascun dels 3 trams que dibuixen els cursors
@@ -1808,6 +1952,17 @@ button.calendar-day:focus-visible {
   </div>
 </dialog>
 
+<dialog id="desplegableCellModal" class="modal modal-wide">
+  <div class="modal-header">
+    <h2 class="modal-title">Desplegable</h2>
+  </div>
+  <div id="desplegableCellFields" class="modal-fields"></div>
+  <div class="modal-actions">
+    <span class="modal-actions-spacer"></span>
+    <button type="button" id="desplegableCellCloseBtn" class="btn btn-primary">Tanca</button>
+  </div>
+</dialog>
+
   <script>
 const ICONS = {
   trash: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.25h11M5.5 4.25V2.75a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5m2 0-.62 8.66a1 1 0 0 1-1 .93H5.12a1 1 0 0 1-1-.93L3.5 4.25"/><path d="M6.5 7.25v4M9.5 7.25v4"/></svg>',
@@ -1944,6 +2099,11 @@ const state = {
   // es torna a carregar el full (vegeu applySheetData a actions.js):
   // un rowIndex vell ja no correspondria a la mateixa fila.
   selectedRows: new Set(),
+  // Files amb la cel·la "Llindà" desplegada (vegeu buildLlindaTableCellControl,
+  // llindasection.js): amagada per defecte a cada fila, es referencien
+  // per rowIndex igual que selectedRows i es buiden pel mateix motiu
+  // (applySheetData a actions.js).
+  expandedLlindaRows: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
@@ -2066,6 +2226,14 @@ function renderTable() {
   table.innerHTML = '';
 
   const visibleColIndexes = getVisibleColIndexes();
+  // Si "Llindà Principi/Final" i els 2 preus hi són tots 4 i seguits
+  // (en aquest ordre), es pinten com una sola columna amb el mateix
+  // gràfic que el pas "Llindà" del formulari de nova fila (vegeu
+  // getLlindaMergeStart/buildLlindaTableCellControl, llindasection.js).
+  // Si en falta algun o no són consecutius, cada columna es manté
+  // separada com sempre (cap sorpresa amb fulls que no segueixen aquest
+  // esquema).
+  const llindaMergeStart = getLlindaMergeStart(visibleColIndexes);
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
@@ -2079,51 +2247,72 @@ function renderTable() {
   thActions.appendChild(selectAll);
   headRow.appendChild(thActions);
 
-  visibleColIndexes.forEach(function (colIndex) {
+  visibleColIndexes.forEach(function (colIndex, i) {
+    // Les 3 columnes següents a on comença el grup del Llindà queden
+    // absorbides pel colSpan del <th> fusionat (vegeu més avall): no
+    // en pinten cap de pròpia.
+    if (llindaMergeStart !== null && i > llindaMergeStart && i <= llindaMergeStart + 3) return;
+    const isLlindaMerge = llindaMergeStart !== null && i === llindaMergeStart;
+
     const th = document.createElement('th');
-    const colClass = columnClassFor(state.headers[colIndex]);
-    if (colClass) th.classList.add(colClass);
-
-    const wrap = document.createElement('button');
-    wrap.type = 'button';
-    wrap.className = 'header-cell';
-    wrap.setAttribute('aria-label', 'Ordena per "' + state.headers[colIndex] + '"');
-
-    const label = document.createElement('span');
-    label.className = 'header-cell-label';
-    label.textContent = state.headers[colIndex];
-    wrap.appendChild(label);
-
-    if (state.sortColIndex === colIndex) {
-      const arrow = document.createElement('span');
-      arrow.className = 'header-cell-sort-icon';
-      arrow.innerHTML = ICONS.chevron;
-      if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
-      wrap.appendChild(arrow);
+    if (isLlindaMerge) {
+      th.colSpan = 4;
+      th.className = 'llinda-cell';
+    } else {
+      const colClass = columnClassFor(state.headers[colIndex]);
+      if (colClass) th.classList.add(colClass);
     }
-
-    wrap.addEventListener('click', function () {
-      if (state.sortColIndex === colIndex) {
-        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        state.sortColIndex = colIndex;
-        state.sortDirection = 'asc';
-      }
-      renderTable();
-    });
 
     const headerRow = document.createElement('div');
     headerRow.className = 'header-cell-row';
-    headerRow.appendChild(wrap);
 
-    // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
-    // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a la
-    // pròpia capçalera de la taula: les columnes abreujades (MÍN,
-    // PREU/P...) no haurien d'obligar a obrir el modal per entendre-les.
-    // Germana del botó d'ordenació, no filla: un <button> no pot
-    // contenir cap altre element interactiu.
-    const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
-    if (helpIcon) headerRow.appendChild(helpIcon);
+    if (isLlindaMerge) {
+      // Columna fusionada: no és una capçalera ordenable (no
+      // representa un únic valor comparable), només una etiqueta.
+      const label = document.createElement('span');
+      label.className = 'header-cell-label';
+      label.textContent = 'Llindà';
+      headerRow.appendChild(label);
+    } else {
+      const wrap = document.createElement('button');
+      wrap.type = 'button';
+      wrap.className = 'header-cell';
+      wrap.setAttribute('aria-label', 'Ordena per "' + state.headers[colIndex] + '"');
+
+      const label = document.createElement('span');
+      label.className = 'header-cell-label';
+      label.textContent = state.headers[colIndex];
+      wrap.appendChild(label);
+
+      if (state.sortColIndex === colIndex) {
+        const arrow = document.createElement('span');
+        arrow.className = 'header-cell-sort-icon';
+        arrow.innerHTML = ICONS.chevron;
+        if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
+        wrap.appendChild(arrow);
+      }
+
+      wrap.addEventListener('click', function () {
+        if (state.sortColIndex === colIndex) {
+          state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortColIndex = colIndex;
+          state.sortDirection = 'asc';
+        }
+        renderTable();
+      });
+
+      headerRow.appendChild(wrap);
+
+      // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
+      // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a
+      // la pròpia capçalera de la taula: les columnes abreujades
+      // (MÍN, PREU/P...) no haurien d'obligar a obrir el modal per
+      // entendre-les. Germana del botó d'ordenació, no filla: un
+      // <button> no pot contenir cap altre element interactiu.
+      const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
+      if (helpIcon) headerRow.appendChild(helpIcon);
+    }
 
     th.appendChild(headerRow);
     headRow.appendChild(th);
@@ -2225,9 +2414,22 @@ function renderTable() {
     tdActions.appendChild(del);
     tr.appendChild(tdActions);
 
-    visibleColIndexes.forEach(function (colIndex) {
-      const value = row[colIndex];
+    visibleColIndexes.forEach(function (colIndex, i) {
+      // Absorbides pel colspan de la cel·la fusionada d'abaix (mateix
+      // criteri que a la capçalera).
+      if (llindaMergeStart !== null && i > llindaMergeStart && i <= llindaMergeStart + 3) return;
+
       const td = document.createElement('td');
+      if (llindaMergeStart !== null && i === llindaMergeStart) {
+        td.colSpan = 4;
+        td.className = 'llinda-cell';
+        const control = buildLlindaTableCellControl(rowIndex);
+        if (control) td.appendChild(control);
+        tr.appendChild(td);
+        return;
+      }
+
+      const value = row[colIndex];
       const colClass = columnClassFor(state.headers[colIndex]);
       if (colClass) td.classList.add(colClass);
       const control = buildTableCellControl(state.headers[colIndex], colIndex, rowIndex, value);
@@ -2483,12 +2685,25 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
     return input;
   }
 
+  // "Desplegable" desa el seu propi JSON a l'instant (dins el diàleg
+  // que obre), no a través del listener "change" genèric de més avall
+  // (que llegiria "" en no trobar cap [data-col-index] dins del botó, i
+  // sobreescriuria la llista amb una cadena buida).
+  if (header === DESPLEGABLE_HEADER) {
+    return buildDesplegableCellControl(colIndex, rowIndex, value);
+  }
+
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
     // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
     // veure buida, no amb un "Selecciona..." que no aporta res (això
     // només té sentit al formulari, on encara no hi ha cap valor desat).
-    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
+    // "ExtresLlista": si la columna "Desplegable" d'aquesta fila ja té
+    // opcions, "desplegable" hi ha de sortir marcat sempre, encara que
+    // no s'hagi desat mai explícitament aquí (withDesplegableAutoSelected,
+    // desplegabletable.js) — sense perdre la resta de valors ja marcats.
+    const cellValue = header === 'ExtresLlista' ? withDesplegableAutoSelected(value, rowIndex) : value;
+    control = buildMultiselectField(colIndex, cellValue, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {
@@ -3477,7 +3692,11 @@ function buildSelectField(colIndex, initialValue, fixedOptions, idPrefix, getOpt
 // Capçaleres booleanes: es mostren com a casella de verificació. El
 // valor desat a la cel·la és "TRUE"/"FALSE" (el mateix format que fa
 // servir Google Sheets per a les seves pròpies caselles de verificació).
-const CHECKBOX_HEADERS = ['perConvidat', 'Optional', 'quantityBased', 'Extres', 'Desplegable'];
+// "Desplegable" no hi és: aquella columna no guarda TRUE/FALSE, sinó el
+// JSON de la llista d'opcions (vegeu DESPLEGABLE_HEADER a
+// desplegabletable.js) — tractar-la com a casella hi sobreescriuria el
+// contingut real en editar-la des de la taula.
+const CHECKBOX_HEADERS = ['perConvidat', 'Optional', 'quantityBased', 'Extres'];
 
 function buildCheckboxField(colIndex, initialValue, idPrefix) {
   const wrap = document.createElement('div');
@@ -3751,17 +3970,24 @@ const LLINDA_RANGE_MAX = 500;
 // lliscadors separats: dos <input type="range"> superposats sobre la
 // mateixa pista, amb el "thumb" com a únic punt clicable de cadascun
 // (truc habitual per simular un slider de doble cursor sense llibreries).
-function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue) {
+// "valuesSource": d'on llegeixen el seu valor inicial els 3 camps de
+// preu — modalValues (pas de desglossament) o la pròpia fila de la
+// taula (state.rows[rowIndex], que també es pot indexar per colIndex).
+// "onFieldChange(colIndex, value)": si es passa, cada canvi es desa a
+// l'instant (ús a la taula, buildLlindaTableCellControl); si no,
+// el component es limita a deixar els valors als [data-col-index]
+// perquè els reculli captureStepValues en canviar de pas del modal.
+function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue, valuesSource, onFieldChange) {
+  valuesSource = valuesSource || modalValues;
   const field = document.createElement('fieldset');
   field.className = 'modal-field range-dual-field';
 
-  const legend = document.createElement('legend');
-  legend.textContent = 'Llindà (Principi – Final)';
-  wireHoverTooltip(legend, 'Rang de nombre de convidats (de Principi a Final) al qual s\'aplica aquest tram.');
-  field.appendChild(legend);
-
   const wrap = document.createElement('div');
   wrap.className = 'range-dual';
+  // Sense llegenda visible (el nom "Llindà" ja hi és, com a capçalera
+  // de secció al modal o de columna a la taula): l'explicació es manté
+  // com a vinyeta d'ajuda sobre el propi slider.
+  wireHoverTooltip(wrap, 'Rang de nombre de convidats (de Principi a Final) al qual s\'aplica aquest tram.');
 
   const track = document.createElement('div');
   track.className = 'range-dual-track';
@@ -3797,16 +4023,42 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
   wrap.appendChild(minInput);
   wrap.appendChild(maxInput);
 
+  function clampRange(value) {
+    if (isNaN(value)) return LLINDA_RANGE_MIN;
+    return Math.min(LLINDA_RANGE_MAX, Math.max(LLINDA_RANGE_MIN, value));
+  }
+
   // Bombolla amb el valor just a sobre de cada cursor (no un text fix
-  // sota el slider), que es desplaça horitzontalment amb el propi cursor.
-  function buildBubble() {
+  // sota el slider), que es desplaça horitzontalment amb el propi
+  // cursor. Conté un <input type="number"> editable: escriure-hi mou
+  // directament el cursor corresponent, sense necessitat d'un camp
+  // separat. El posicionament (left) es fa sobre el <span> contenidor,
+  // no sobre l'input: un <input> és un element "replaced" i no admet
+  // ::after (la punta de la bombolla), per això cal l'embolcall.
+  function buildBubble(pairedInput, ariaLabel) {
     const bubble = document.createElement('span');
     bubble.className = 'range-dual-bubble';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'range-dual-bubble-input';
+    input.min = String(LLINDA_RANGE_MIN);
+    input.max = String(LLINDA_RANGE_MAX);
+    input.step = '1';
+    input.value = pairedInput.value;
+    input.setAttribute('aria-label', ariaLabel);
+    input.addEventListener('input', function () {
+      pairedInput.value = String(clampRange(Number(input.value)));
+      refresh(pairedInput);
+    });
+    if (onFieldChange) input.addEventListener('change', commitBounds);
+    bubble.appendChild(input);
+
     wrap.appendChild(bubble);
-    return bubble;
+    return { wrapper: bubble, input: input };
   }
-  const minBubble = buildBubble();
-  const maxBubble = buildBubble();
+  const minBubble = buildBubble(minInput, 'Llindà Principi (valor exacte)');
+  const maxBubble = buildBubble(maxInput, 'Llindà Final (valor exacte)');
 
   // Sota el slider, un camp de moneda per a cadascun dels 3 trams que
   // els dos cursors dibuixen a la pista (0→Principi, Principi→Final,
@@ -3824,6 +4076,16 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
   function updateZoneMinWidth(input) {
     const digits = String(input.value).replace('-', '').length;
     input.style.minWidth = Math.max(2, digits + 1) + 'ch';
+  }
+
+  // La bombolla, a diferència dels camps de tram, no viu dins d'un
+  // contenidor flex que li doni amplada: cal fixar "width" (no només
+  // "min-width", que un <input type="number"> ignoraria en favor de la
+  // seva amplada per defecte del navegador, molt més grossa que el
+  // contingut real).
+  function updateBubbleWidth(input) {
+    const digits = String(input.value).replace('-', '').length;
+    input.style.width = Math.max(1, digits) + 'ch';
   }
 
   // Mateix patró visual que buildCurrencyField (camp de moneda), però
@@ -3846,10 +4108,11 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
     input.className = 'range-dual-zone-input';
     input.id = 'addRowField' + colIndex;
     input.dataset.colIndex = String(colIndex);
-    const parsedValue = parseCurrencyInputValue(modalValues[colIndex]);
+    const parsedValue = parseCurrencyInputValue(valuesSource[colIndex]);
     input.value = parsedValue || '0';
     input.setAttribute('aria-label', header);
     input.addEventListener('input', function () { updateZoneMinWidth(input); });
+    if (onFieldChange) input.addEventListener('change', function () { onFieldChange(colIndex, input.value); });
     updateZoneMinWidth(input);
     if (FIELD_HELP_TEXT[header]) wireHoverTooltip(wrap, FIELD_HELP_TEXT[header]);
 
@@ -3905,10 +4168,12 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
       // transform, un percentatge es resol respecte a la pròpia caixa
       // de la bombolla, no respecte al contenidor — la fórmula de
       // thumbCenter() perdria tot sentit si s'hi apliqués.
-      minBubble.style.left = minCenter;
-      minBubble.textContent = minInput.value;
-      maxBubble.style.left = maxCenter;
-      maxBubble.textContent = maxInput.value;
+      minBubble.wrapper.style.left = minCenter;
+      minBubble.input.value = minInput.value;
+      updateBubbleWidth(minBubble.input);
+      maxBubble.wrapper.style.left = maxCenter;
+      maxBubble.input.value = maxInput.value;
+      updateBubbleWidth(maxBubble.input);
 
       // Repartiment amb flexbox (flex-grow proporcional a l'amplada de
       // cada tram, min-width fixat a CSS): a diferència de left/width
@@ -3933,8 +4198,21 @@ function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, f
     });
   }
 
+  // Desa Principi i Final junts (no només el cursor que s'ha mogut):
+  // si arrossegar-ne un ha clavat l'altre per evitar que es creuin
+  // (applyRefresh), aquell canvi silenciós també ha d'acabar desat.
+  function commitBounds() {
+    if (!onFieldChange) return;
+    onFieldChange(principiColIndex, minInput.value);
+    onFieldChange(finalColIndex, maxInput.value);
+  }
+
   minInput.addEventListener('input', function () { refresh(minInput); });
   maxInput.addEventListener('input', function () { refresh(maxInput); });
+  if (onFieldChange) {
+    minInput.addEventListener('change', commitBounds);
+    maxInput.addEventListener('change', commitBounds);
+  }
   applyRefresh(minInput);
 
   field.appendChild(wrap);
@@ -3976,12 +4254,99 @@ function buildLlindaSection() {
   const finalColIndex = state.headers.indexOf(LLINDA_HEADERS.final);
   if (principiColIndex !== -1 && finalColIndex !== -1) {
     fieldsGrid.appendChild(buildLlindaRangeField(
-      principiColIndex, finalColIndex, modalValues[principiColIndex], modalValues[finalColIndex]
+      principiColIndex, finalColIndex, modalValues[principiColIndex], modalValues[finalColIndex], modalValues
     ));
   }
 
   container.appendChild(fieldsGrid);
   return container;
+}
+
+// Posició (dins de "visibleColIndexes") on comencen les 4 columnes del
+// Llindà a la taula principal, si hi són TOTES 4 i són consecutives en
+// aquest ordre exacte (Principi, Final, preu X<0, preu 0<X); null si en
+// falta alguna o no van seguides — en aquest cas cada columna es pinta
+// per separat, com sempre (mai se n'amaga cap sense fusionar-la).
+function getLlindaMergeStart(visibleColIndexes) {
+  const headers = [LLINDA_HEADERS.principi, LLINDA_HEADERS.final, LLINDA_HEADERS.negatiu, LLINDA_HEADERS.positiu];
+  const positions = headers.map(function (header) {
+    return visibleColIndexes.indexOf(state.headers.indexOf(header));
+  });
+  if (positions.indexOf(-1) !== -1) return null;
+  const start = positions[0];
+  const isConsecutive = positions.every(function (pos, i) { return pos === start + i; });
+  return isConsecutive ? start : null;
+}
+
+// Mateix gràfic que el pas "Llindà" del formulari de nova fila, però
+// per a una fila ja existent de la taula: llegeix/desa directament
+// contra state.rows[rowIndex] (indexable per colIndex igual que
+// modalValues) en lloc de contra el formulari de nova fila. Substitueix
+// les 4 columnes soltes (Principi/Final/els 2 preus) per una de sola.
+function buildLlindaTableCellControl(rowIndex) {
+  const principiColIndex = state.headers.indexOf(LLINDA_HEADERS.principi);
+  const finalColIndex = state.headers.indexOf(LLINDA_HEADERS.final);
+  if (principiColIndex === -1 || finalColIndex === -1) return null;
+
+  // Encara que la columna hi sigui, només es dibuixa el gràfic si
+  // aquesta fila té "llinda" marcat a "ExtresLlista" (mateix criteri
+  // que decideix si el pas "Llindà" surt al formulari de nova fila,
+  // vegeu getSelectedExtresLlistaLive a modal-state.js, aplicat aquí
+  // contra la fila ja desada en lloc de modalValues). La cel·la queda
+  // buida en cas contrari, no s'hi amaga la columna sencera.
+  const extresLlistaColIndex = state.headers.indexOf('ExtresLlista');
+  if (extresLlistaColIndex === -1) return null;
+  const selected = String(state.rows[rowIndex][extresLlistaColIndex] || '').split(',').map(function (part) { return part.trim(); });
+  if (selected.indexOf('llinda') === -1) return null;
+
+  // Col·lapsat per defecte (state.expandedLlindaRows, state.js): el
+  // gràfic és molt més alt que una cel·la normal, així que a cada fila
+  // només s'hi construeix quan l'usuari l'obre explícitament, no de
+  // seguida. L'estat d'obert/tancat es manté entre renderTable()
+  // (p.ex. en desar un altre canvi), igual que selectedRows.
+  const disclosure = document.createElement('div');
+  disclosure.className = 'llinda-disclosure';
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.className = 'llinda-disclosure-toggle';
+  const chevron = document.createElement('span');
+  chevron.className = 'llinda-disclosure-chevron';
+  chevron.innerHTML = ICONS.chevron;
+  chevron.setAttribute('aria-hidden', 'true');
+  const toggleLabel = document.createElement('span');
+  toggleBtn.appendChild(chevron);
+  toggleBtn.appendChild(toggleLabel);
+  disclosure.appendChild(toggleBtn);
+
+  const body = document.createElement('div');
+  body.className = 'llinda-disclosure-body';
+  disclosure.appendChild(body);
+
+  function setExpanded(expanded) {
+    toggleBtn.setAttribute('aria-expanded', String(expanded));
+    chevron.classList.toggle('is-open', expanded);
+    toggleLabel.textContent = expanded ? 'Amaga el Llindà' : 'Mostra el Llindà';
+    body.hidden = !expanded;
+    // Es construeix el gràfic real només la primera vegada que s'obre
+    // (no de seguida, ni cada vegada que es tanca i es torna a obrir):
+    // és l'únic camp de la cel·la, així que no cal reconstruir-lo.
+    if (expanded && !body.firstChild) {
+      const row = state.rows[rowIndex];
+      body.appendChild(buildLlindaRangeField(
+        principiColIndex, finalColIndex, row[principiColIndex], row[finalColIndex], row,
+        function (colIndex, value) { saveTableCell(rowIndex, colIndex, value); }
+      ));
+    }
+  }
+  toggleBtn.addEventListener('click', function () {
+    const expanded = !state.expandedLlindaRows.has(rowIndex);
+    if (expanded) state.expandedLlindaRows.add(rowIndex); else state.expandedLlindaRows.delete(rowIndex);
+    setExpanded(expanded);
+  });
+  setExpanded(state.expandedLlindaRows.has(rowIndex));
+
+  return disclosure;
 }
 // Secció "Desplegable" del pas de desglossament: permet construir una
 // llista d'opcions (nom en 3 idiomes + preu) que es desa a la cel·la
@@ -4033,27 +4398,38 @@ function parseDesplegableItems(raw) {
   }
 }
 
-function buildDesplegableSection(colIndex) {
-  const container = document.createElement('div');
-  container.className = 'breakdown-section';
-  // "group" (no un camp de formulari real) perquè pugui rebre
-  // aria-invalid quan la llista és buida: sense cap rol, un lector de
-  // pantalla no anunciaria mai aquest estat (vegeu wireRequiredField
-  // més avall, on es passa el propi contenidor com a ariaTarget).
-  container.setAttribute('role', 'group');
-  container.setAttribute('aria-label', 'Llista d\'opcions del desplegable');
+// Sincronitza "desplegable" al valor de la cel·la "ExtresLlista" amb si
+// la columna "Desplegable" d'aquesta mateixa fila té opcions desades o
+// no: l'afegeix quan n'hi ha i el treu quan no n'hi ha (mai pot quedar
+// marcat sense cap opció real al darrere). Purament de lectura/
+// visualització (no desa res sol): es recalcula a cada render, així que
+// sempre queda consistent encara que "Desplegable" s'hagi editat sense
+// passar mai per "ExtresLlista".
+function withDesplegableAutoSelected(extresLlistaValue, rowIndex) {
+  const desplegableColIndex = state.headers.indexOf(DESPLEGABLE_HEADER);
+  if (desplegableColIndex === -1) return extresLlistaValue;
+  const hasItems = parseDesplegableItems(state.rows[rowIndex][desplegableColIndex]).length > 0;
 
-  const heading = document.createElement('h3');
-  heading.className = 'section-heading';
-  heading.textContent = 'Desplegable';
-  container.appendChild(heading);
+  const parts = String(extresLlistaValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+  const index = parts.indexOf('desplegable');
+  if (hasItems && index === -1) parts.push('desplegable');
+  if (!hasItems && index !== -1) parts.splice(index, 1);
+  return parts.join(',');
+}
 
-  const items = parseDesplegableItems(modalValues[colIndex]);
-
-  const hiddenInput = document.createElement('input');
-  hiddenInput.type = 'hidden';
-  hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = JSON.stringify(items);
+// Taula + formulari per construir la llista d'opcions (nom en 3
+// idiomes + preu), independent de d'on es criden (pas de desglossament
+// del formulari de nova fila, o el diàleg d'edició ràpida des de la
+// taula): "items" es muta in situ (push/splice), mai es reassigna, així
+// qui la té capturada (el propi cridant) sempre veu l'última versió;
+// "onChange" es crida després de cada mutació perquè el cridant decideixi
+// què fer-ne (desar a un input ocult, desar directament a la fulla...).
+// Retorna { element, renderRows } — renderRows es reexposa perquè un
+// cridant pugui forçar-ne el repintat si reverteix "items" ell mateix
+// (p.ex. en desfer un desat fallit).
+function buildDesplegableListEditor(items, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'desplegable-editor';
 
   const table = document.createElement('table');
   table.className = 'desplegable-table';
@@ -4088,9 +4464,8 @@ function buildDesplegableSection(colIndex) {
       removeBtn.innerHTML = ICONS.trash;
       removeBtn.addEventListener('click', function () {
         items.splice(index, 1);
-        hiddenInput.value = JSON.stringify(items);
         renderRows();
-        container.dispatchEvent(new Event('change'));
+        onChange();
       });
       tdActions.appendChild(removeBtn);
       tr.appendChild(tdActions);
@@ -4150,7 +4525,6 @@ function buildDesplegableSection(colIndex) {
       ENG: engInput.value.trim(),
       PREU: Number(priceInput.value),
     });
-    hiddenInput.value = JSON.stringify(items);
     renderRows();
     catInput.value = '';
     castInput.value = '';
@@ -4158,7 +4532,7 @@ function buildDesplegableSection(colIndex) {
     priceInput.value = '';
     refreshAddBtn();
     catInput.focus();
-    container.dispatchEvent(new Event('change'));
+    onChange();
   }
 
   addBtn.addEventListener('click', addEntry);
@@ -4187,8 +4561,44 @@ function buildDesplegableSection(colIndex) {
   form.appendChild(priceWrap);
   form.appendChild(addBtn);
 
-  container.appendChild(table);
-  container.appendChild(form);
+  wrap.appendChild(table);
+  wrap.appendChild(form);
+
+  return { element: wrap, renderRows: renderRows };
+}
+
+// Secció "Desplegable" del pas de desglossament del formulari de nova
+// fila: embolcall de buildDesplegableListEditor amb capçalera, input
+// ocult (el que legeix captureStepValues en canviar de pas) i validació
+// de "cal almenys una opció".
+function buildDesplegableSection(colIndex) {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+  // "group" (no un camp de formulari real) perquè pugui rebre
+  // aria-invalid quan la llista és buida: sense cap rol, un lector de
+  // pantalla no anunciaria mai aquest estat (vegeu wireRequiredField
+  // més avall, on es passa el propi contenidor com a ariaTarget).
+  container.setAttribute('role', 'group');
+  container.setAttribute('aria-label', 'Llista d\'opcions del desplegable');
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Desplegable';
+  container.appendChild(heading);
+
+  const items = parseDesplegableItems(modalValues[colIndex]);
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.dataset.colIndex = String(colIndex);
+  hiddenInput.value = JSON.stringify(items);
+
+  const editor = buildDesplegableListEditor(items, function () {
+    hiddenInput.value = JSON.stringify(items);
+    container.dispatchEvent(new Event('change'));
+  });
+
+  container.appendChild(editor.element);
   container.appendChild(hiddenInput);
 
   // Cal almenys una opció afegida a la taula (el formulari de dalt, per
@@ -4202,6 +4612,82 @@ function buildDesplegableSection(colIndex) {
   }, 'Afegeix almenys una opció al desplegable.', container);
 
   return container;
+}
+
+// Botó de la cel·la a la taula principal (columna "Desplegable"): mostra
+// un resum ("N opcions") i, en clicar-hi, obre un diàleg amb el mateix
+// editor (taula + formulari) que al pas de desglossament, però desant
+// cada canvi a l'instant (com la resta de cel·les editables), no en
+// acabar tot un formulari de nova fila.
+function updateDesplegableCellBtnLabel(btn, items) {
+  // Cel·la buida (no "Sense opcions") quan encara no hi ha cap opció:
+  // mateix criteri que la resta de columnes sense valor a la taula
+  // (p.ex. buildMultiselectField amb placeholder ''). El botó continua
+  // sent clicable per afegir-ne la primera.
+  btn.textContent = items.length
+    ? items.length + (items.length === 1 ? ' opció' : ' opcions')
+    : '';
+}
+
+function openDesplegableCellDialog(colIndex, rowIndex, items, onSaved) {
+  const dialog = document.getElementById('desplegableCellModal');
+  const fieldsWrap = document.getElementById('desplegableCellFields');
+  fieldsWrap.innerHTML = '';
+
+  // Última versió efectivament desada al servidor: si un desat falla,
+  // "items" es reverteix a aquest JSON (i no simplement es descarta el
+  // canvi, perquè l'usuari pot haver afegit/tret més d'una opció abans
+  // que la crida fallida torni).
+  let lastSavedJson = JSON.stringify(items);
+
+  const editor = buildDesplegableListEditor(items, function () {
+    const attemptedJson = JSON.stringify(items);
+    saveTableCell(rowIndex, colIndex, attemptedJson, function () {
+      items.length = 0;
+      Array.prototype.push.apply(items, JSON.parse(lastSavedJson));
+      editor.renderRows();
+      onSaved(items);
+    }, function () {
+      lastSavedJson = attemptedJson;
+      onSaved(items);
+    });
+  });
+  fieldsWrap.appendChild(editor.element);
+
+  const closeBtn = document.getElementById('desplegableCellCloseBtn');
+  function onClose() {
+    closeBtn.removeEventListener('click', onClose);
+    dialog.removeEventListener('cancel', onClose);
+    if (dialog.open) dialog.close();
+  }
+  closeBtn.addEventListener('click', onClose);
+  // "cancel" es dispara en tancar amb Escape.
+  dialog.addEventListener('cancel', onClose);
+
+  dialog.showModal();
+}
+
+function buildDesplegableCellControl(colIndex, rowIndex, value) {
+  const items = parseDesplegableItems(value);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'desplegable-cell-btn';
+  updateDesplegableCellBtnLabel(btn, items);
+  wireHoverTooltip(btn, 'Edita la llista d\'opcions del desplegable.');
+
+  btn.addEventListener('click', function () {
+    // renderTable() sencer (no només updateDesplegableCellBtnLabel en
+    // aquest botó): un canvi aquí també pot alterar què hi surt marcat a
+    // "ExtresLlista" d'aquesta mateixa fila (withDesplegableAutoSelected),
+    // que és una cel·la diferent i, sense repintar-la, es quedava amb el
+    // valor vell fins que l'usuari recarregava la pàgina.
+    openDesplegableCellDialog(colIndex, rowIndex, items, function () {
+      renderTable();
+    });
+  });
+
+  return btn;
 }
 // Pas 5 (condicional): secció "Input Númeric" (Unitat + Preu, desat a
 // ExtraUnitat com "Unitat,Preu") i secció "Switch" (dues opcions
@@ -4591,7 +5077,7 @@ const FIELD_HELP_TEXT = {
   'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
   'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
   'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
-  'Desplegable': 'Marca-ho si aquest servei ofereix un desplegable d\'opcions amb preus diferents (es configura al pas de desglossament).',
+  'Desplegable': 'Llista d\'opcions amb preus diferents (es configura al pas de desglossament, dins d\'"ExtresLlista").',
   'Unit': 'Si el preu és per persona o per pack sencer (packs fixos, independentment del nombre de persones).',
   'ExtresLlista': 'Quins tipus d\'extra vols configurar per a aquest servei: desplegable d\'opcions, llindars per trams, o altres extres addicionals.',
   'ExtraExtresLlista': 'Quin tipus d\'extra addicional vols configurar: un camp numèric amb preu (Input Numèric) o dues opcions alternatives amb preu cada una (Switch).',
@@ -4848,6 +5334,12 @@ function buildAltresExtresSection() {
 function openAddRowModal() {
   modalStepIndex = STEP_GENERAL;
   modalValues = {};
+  // "Optional" marcat per defecte en crear una fila nova (la immensa
+  // majoria de serveis nous ho són): només afecta el formulari de nova
+  // fila, no les files ja existents de la taula (buildTableCellControl
+  // hi llegeix el valor real desat, mai passa per aquí).
+  const optionalColIndex = state.headers.indexOf('Optional');
+  if (optionalColIndex !== -1) modalValues[optionalColIndex] = 'TRUE';
   renderModalStep();
   document.getElementById('addRowModal').showModal();
 }
@@ -5125,6 +5617,7 @@ function applySheetData(data) {
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
   state.selectedRows.clear();
+  state.expandedLlindaRows.clear();
 }
 
 function onSheetLoaded(data, requestedName, silent) {

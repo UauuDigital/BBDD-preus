@@ -6,7 +6,12 @@
   background: var(--bg-page);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  max-height: calc(100vh - 220px);
+  /* Prou petita perquè la barra de scroll horitzontal (al peu de
+     .table-wrap) quedi sempre dins del viewport amb la pàgina desplaçada
+     a dalt de tot, sense que calgui fer scroll vertical de la pàgina
+     sencera per arribar-hi. 280px (no 220px) deixa marge per a la
+     capçalera, pestanyes, filtres i barra d'eines de sobre. */
+  max-height: calc(100vh - 280px);
 }
 
 table { border-collapse: collapse; width: 100%; font-size: var(--text-base); }
@@ -146,6 +151,13 @@ tr:hover .icon-btn,
   .icon-btn { width: 44px; height: 44px; }
 }
 
+/* Columnes booleanes (CHECKBOX_HEADERS): ".checkbox-field" (definit a
+   modal-fields-extra.css) ja és flex, però sense "justify-content" hi
+   queda arran de l'esquerra de la cel·la; només es centra dins la
+   taula (descendent de td), no al modal, on segueix arran del label
+   com sempre. */
+td .checkbox-field { justify-content: center; }
+
 .cell-input {
   width: 100%;
   border: none;
@@ -200,10 +212,62 @@ td .multiselect-trigger.is-open .multiselect-trigger-chevron {
   opacity: 1;
 }
 
+/* Cel·la de la columna "Desplegable": un botó, no un input, ja que no
+   s'hi escriu directament (obre el diàleg d'edició de la llista).
+   Mateix llenguatge visual que .cell-input/.multiselect-trigger: flush
+   a la cel·la, sense vora pròpia, es marca en passar-hi el ratolí. */
+.desplegable-cell-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-primary);
+  text-align: left;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+tr:hover .desplegable-cell-btn { background: var(--bg-surface); }
+.desplegable-cell-btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  background: var(--bg-page);
+}
+
 .row-actions-col { width: 116px; min-width: 116px; }
 td.row-actions-col, th.row-actions-col { text-align: center; }
 td.row-actions-col { padding: 0 var(--space-2); white-space: nowrap; }
 td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
+
+/* Sempre visible en fer scroll horitzontal (selecció/duplicar/esborrar
+   són accions que s'han de poder fer des de qualsevol columna en què
+   s'estigui mirant, no només des de l'esquerra de tot). Fons opac
+   propi (no transparent): en quedar per sobre de la resta de cel·les
+   en fer scroll, sense fons es veurien les altres columnes a través.
+   th.row-actions-col ja té sticky top (thead th, més amunt): aquí
+   només s'hi afegeix "left", i es puja el z-index perquè guanyi tant
+   a les cel·les normals (que no en tenen) com als altres th (z-index:1)
+   quan totes dues stickies coincideixen a la cantonada superior
+   esquerra. La vora dreta és un ::after propi, no el border-right
+   habitual ni un box-shadow: amb border-collapse:collapse (més amunt),
+   el navegador pinta les vores col·lapsades amb el seu propi mecanisme
+   (no com una capa normal de l'element), que ignora "position: sticky"
+   — tant el border com el box-shadow desapareixen o es tallen en fer
+   scroll. Un pseudo-element absolut, en canvi, és una capa normal més
+   dins de l'element sticky, així que sempre es queda enganxat amb ell. */
+td.row-actions-col, th.row-actions-col { position: sticky; left: 0; }
+td.row-actions-col { z-index: 1; background: var(--bg-page); }
+th.row-actions-col { z-index: 2; }
+td.row-actions-col::after, th.row-actions-col::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-default);
+}
 
 /* A tàctil, .icon-btn puja a 44×44 (vegeu més avall): casella + 2
    botons ja no caben en els 116px pensats per a ratolí, i quedarien
@@ -226,6 +290,60 @@ td.row-actions-col .icon-btn + .icon-btn { margin-left: var(--space-1); }
    llarga, MÍN/PREU/P/Any són valors curts. */
 .col-wide { min-width: 320px; }
 .col-narrow { width: 90px; min-width: 90px; }
+
+/* Columna fusionada "Llindà" (Principi/Final + els 2 preus en una de
+   sola, vegeu getLlindaMergeStart a llindasection.js): necessita més
+   amplada que una columna normal perquè hi càpiga el mateix gràfic de
+   slider que al formulari de nova fila. El propi component ja porta
+   l'estil de ".modal-field.range-dual-field" (modal-breakdown.css),
+   vàlid també fora del modal perquè és un selector de classe, no
+   d'ascendència. */
+/* Sense padding propi (com la resta de td/th, regla general més
+   amunt): el porta ".llinda-disclosure-toggle"/".llinda-disclosure-body"
+   de dins, igual que ".cell-input" el porta a les altres columnes. Si
+   la td també en tingués, s'hi sumarien tots dos i la fila (fins i tot
+   col·lapsada) quedaria més alta que la resta. */
+.llinda-cell { min-width: 420px; }
+/* Al modal hi ha marge de sobres per a l'espaiat entre el slider i els
+   preus; en una fila de taula (una entre moltes) cal quedar-se prim.
+   No es toca el marge superior del slider (--space-*, reservat per a
+   la bombolla de valor que hi flota a sobre: sense ell, es tallaria). */
+.llinda-cell .range-dual-zones { margin-top: var(--space-1); }
+
+/* Desplegable per fila del Llindà (buildLlindaTableCellControl,
+   llindasection.js): col·lapsat per defecte, mateixa alçada que una
+   cel·la normal; només en obrir-lo creix la fila per encabir el
+   gràfic. Mateix llenguatge visual que .cell-input (flush a la
+   cel·la, es marca en passar-hi el ratolí). */
+.llinda-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--space-3);
+  font-size: var(--text-base);
+  color: var(--fg-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+tr:hover .llinda-disclosure-toggle { background: var(--bg-surface); }
+.llinda-disclosure-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  background: var(--bg-page);
+}
+.llinda-disclosure-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--fg-tertiary);
+  transition: transform var(--duration) var(--ease-out);
+}
+/* Mateix conveni que ".multiselect-trigger-chevron" (modal-multiselect.css):
+   tancat = cap avall (sense rotar), obert = rotat 180° (cap amunt). */
+.llinda-disclosure-chevron.is-open { transform: rotate(180deg); }
+.llinda-disclosure-body { padding: 0 var(--space-3) var(--space-2); }
 
 /* ---------------------------------------------------------
    Empty & skeleton states

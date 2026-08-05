@@ -48,27 +48,38 @@ function parseDesplegableItems(raw) {
   }
 }
 
-function buildDesplegableSection(colIndex) {
-  const container = document.createElement('div');
-  container.className = 'breakdown-section';
-  // "group" (no un camp de formulari real) perquè pugui rebre
-  // aria-invalid quan la llista és buida: sense cap rol, un lector de
-  // pantalla no anunciaria mai aquest estat (vegeu wireRequiredField
-  // més avall, on es passa el propi contenidor com a ariaTarget).
-  container.setAttribute('role', 'group');
-  container.setAttribute('aria-label', 'Llista d\'opcions del desplegable');
+// Sincronitza "desplegable" al valor de la cel·la "ExtresLlista" amb si
+// la columna "Desplegable" d'aquesta mateixa fila té opcions desades o
+// no: l'afegeix quan n'hi ha i el treu quan no n'hi ha (mai pot quedar
+// marcat sense cap opció real al darrere). Purament de lectura/
+// visualització (no desa res sol): es recalcula a cada render, així que
+// sempre queda consistent encara que "Desplegable" s'hagi editat sense
+// passar mai per "ExtresLlista".
+function withDesplegableAutoSelected(extresLlistaValue, rowIndex) {
+  const desplegableColIndex = state.headers.indexOf(DESPLEGABLE_HEADER);
+  if (desplegableColIndex === -1) return extresLlistaValue;
+  const hasItems = parseDesplegableItems(state.rows[rowIndex][desplegableColIndex]).length > 0;
 
-  const heading = document.createElement('h3');
-  heading.className = 'section-heading';
-  heading.textContent = 'Desplegable';
-  container.appendChild(heading);
+  const parts = String(extresLlistaValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+  const index = parts.indexOf('desplegable');
+  if (hasItems && index === -1) parts.push('desplegable');
+  if (!hasItems && index !== -1) parts.splice(index, 1);
+  return parts.join(',');
+}
 
-  const items = parseDesplegableItems(modalValues[colIndex]);
-
-  const hiddenInput = document.createElement('input');
-  hiddenInput.type = 'hidden';
-  hiddenInput.dataset.colIndex = String(colIndex);
-  hiddenInput.value = JSON.stringify(items);
+// Taula + formulari per construir la llista d'opcions (nom en 3
+// idiomes + preu), independent de d'on es criden (pas de desglossament
+// del formulari de nova fila, o el diàleg d'edició ràpida des de la
+// taula): "items" es muta in situ (push/splice), mai es reassigna, així
+// qui la té capturada (el propi cridant) sempre veu l'última versió;
+// "onChange" es crida després de cada mutació perquè el cridant decideixi
+// què fer-ne (desar a un input ocult, desar directament a la fulla...).
+// Retorna { element, renderRows } — renderRows es reexposa perquè un
+// cridant pugui forçar-ne el repintat si reverteix "items" ell mateix
+// (p.ex. en desfer un desat fallit).
+function buildDesplegableListEditor(items, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'desplegable-editor';
 
   const table = document.createElement('table');
   table.className = 'desplegable-table';
@@ -103,9 +114,8 @@ function buildDesplegableSection(colIndex) {
       removeBtn.innerHTML = ICONS.trash;
       removeBtn.addEventListener('click', function () {
         items.splice(index, 1);
-        hiddenInput.value = JSON.stringify(items);
         renderRows();
-        container.dispatchEvent(new Event('change'));
+        onChange();
       });
       tdActions.appendChild(removeBtn);
       tr.appendChild(tdActions);
@@ -165,7 +175,6 @@ function buildDesplegableSection(colIndex) {
       ENG: engInput.value.trim(),
       PREU: Number(priceInput.value),
     });
-    hiddenInput.value = JSON.stringify(items);
     renderRows();
     catInput.value = '';
     castInput.value = '';
@@ -173,7 +182,7 @@ function buildDesplegableSection(colIndex) {
     priceInput.value = '';
     refreshAddBtn();
     catInput.focus();
-    container.dispatchEvent(new Event('change'));
+    onChange();
   }
 
   addBtn.addEventListener('click', addEntry);
@@ -202,8 +211,44 @@ function buildDesplegableSection(colIndex) {
   form.appendChild(priceWrap);
   form.appendChild(addBtn);
 
-  container.appendChild(table);
-  container.appendChild(form);
+  wrap.appendChild(table);
+  wrap.appendChild(form);
+
+  return { element: wrap, renderRows: renderRows };
+}
+
+// Secció "Desplegable" del pas de desglossament del formulari de nova
+// fila: embolcall de buildDesplegableListEditor amb capçalera, input
+// ocult (el que legeix captureStepValues en canviar de pas) i validació
+// de "cal almenys una opció".
+function buildDesplegableSection(colIndex) {
+  const container = document.createElement('div');
+  container.className = 'breakdown-section';
+  // "group" (no un camp de formulari real) perquè pugui rebre
+  // aria-invalid quan la llista és buida: sense cap rol, un lector de
+  // pantalla no anunciaria mai aquest estat (vegeu wireRequiredField
+  // més avall, on es passa el propi contenidor com a ariaTarget).
+  container.setAttribute('role', 'group');
+  container.setAttribute('aria-label', 'Llista d\'opcions del desplegable');
+
+  const heading = document.createElement('h3');
+  heading.className = 'section-heading';
+  heading.textContent = 'Desplegable';
+  container.appendChild(heading);
+
+  const items = parseDesplegableItems(modalValues[colIndex]);
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.dataset.colIndex = String(colIndex);
+  hiddenInput.value = JSON.stringify(items);
+
+  const editor = buildDesplegableListEditor(items, function () {
+    hiddenInput.value = JSON.stringify(items);
+    container.dispatchEvent(new Event('change'));
+  });
+
+  container.appendChild(editor.element);
   container.appendChild(hiddenInput);
 
   // Cal almenys una opció afegida a la taula (el formulari de dalt, per
@@ -217,4 +262,80 @@ function buildDesplegableSection(colIndex) {
   }, 'Afegeix almenys una opció al desplegable.', container);
 
   return container;
+}
+
+// Botó de la cel·la a la taula principal (columna "Desplegable"): mostra
+// un resum ("N opcions") i, en clicar-hi, obre un diàleg amb el mateix
+// editor (taula + formulari) que al pas de desglossament, però desant
+// cada canvi a l'instant (com la resta de cel·les editables), no en
+// acabar tot un formulari de nova fila.
+function updateDesplegableCellBtnLabel(btn, items) {
+  // Cel·la buida (no "Sense opcions") quan encara no hi ha cap opció:
+  // mateix criteri que la resta de columnes sense valor a la taula
+  // (p.ex. buildMultiselectField amb placeholder ''). El botó continua
+  // sent clicable per afegir-ne la primera.
+  btn.textContent = items.length
+    ? items.length + (items.length === 1 ? ' opció' : ' opcions')
+    : '';
+}
+
+function openDesplegableCellDialog(colIndex, rowIndex, items, onSaved) {
+  const dialog = document.getElementById('desplegableCellModal');
+  const fieldsWrap = document.getElementById('desplegableCellFields');
+  fieldsWrap.innerHTML = '';
+
+  // Última versió efectivament desada al servidor: si un desat falla,
+  // "items" es reverteix a aquest JSON (i no simplement es descarta el
+  // canvi, perquè l'usuari pot haver afegit/tret més d'una opció abans
+  // que la crida fallida torni).
+  let lastSavedJson = JSON.stringify(items);
+
+  const editor = buildDesplegableListEditor(items, function () {
+    const attemptedJson = JSON.stringify(items);
+    saveTableCell(rowIndex, colIndex, attemptedJson, function () {
+      items.length = 0;
+      Array.prototype.push.apply(items, JSON.parse(lastSavedJson));
+      editor.renderRows();
+      onSaved(items);
+    }, function () {
+      lastSavedJson = attemptedJson;
+      onSaved(items);
+    });
+  });
+  fieldsWrap.appendChild(editor.element);
+
+  const closeBtn = document.getElementById('desplegableCellCloseBtn');
+  function onClose() {
+    closeBtn.removeEventListener('click', onClose);
+    dialog.removeEventListener('cancel', onClose);
+    if (dialog.open) dialog.close();
+  }
+  closeBtn.addEventListener('click', onClose);
+  // "cancel" es dispara en tancar amb Escape.
+  dialog.addEventListener('cancel', onClose);
+
+  dialog.showModal();
+}
+
+function buildDesplegableCellControl(colIndex, rowIndex, value) {
+  const items = parseDesplegableItems(value);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'desplegable-cell-btn';
+  updateDesplegableCellBtnLabel(btn, items);
+  wireHoverTooltip(btn, 'Edita la llista d\'opcions del desplegable.');
+
+  btn.addEventListener('click', function () {
+    // renderTable() sencer (no només updateDesplegableCellBtnLabel en
+    // aquest botó): un canvi aquí també pot alterar què hi surt marcat a
+    // "ExtresLlista" d'aquesta mateixa fila (withDesplegableAutoSelected),
+    // que és una cel·la diferent i, sense repintar-la, es quedava amb el
+    // valor vell fins que l'usuari recarregava la pàgina.
+    openDesplegableCellDialog(colIndex, rowIndex, items, function () {
+      renderTable();
+    });
+  });
+
+  return btn;
 }

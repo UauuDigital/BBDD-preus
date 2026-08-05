@@ -4,6 +4,12 @@
 function openAddRowModal() {
   modalStepIndex = STEP_GENERAL;
   modalValues = {};
+  // "Optional" marcat per defecte en crear una fila nova (la immensa
+  // majoria de serveis nous ho són): només afecta el formulari de nova
+  // fila, no les files ja existents de la taula (buildTableCellControl
+  // hi llegeix el valor real desat, mai passa per aquí).
+  const optionalColIndex = state.headers.indexOf('Optional');
+  if (optionalColIndex !== -1) modalValues[optionalColIndex] = 'TRUE';
   renderModalStep();
   document.getElementById('addRowModal').showModal();
 }

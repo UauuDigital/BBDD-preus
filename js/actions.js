@@ -32,6 +32,7 @@ function applySheetData(data) {
   state.rows = (data.rows || []).map(function (row) { return padRow(row, width); });
   state.loaded = true;
   state.selectedRows.clear();
+  state.expandedLlindaRows.clear();
 }
 
 function onSheetLoaded(data, requestedName, silent) {

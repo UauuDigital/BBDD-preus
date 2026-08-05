@@ -124,6 +124,11 @@ const state = {
   // es torna a carregar el full (vegeu applySheetData a actions.js):
   // un rowIndex vell ja no correspondria a la mateixa fila.
   selectedRows: new Set(),
+  // Files amb la cel·la "Llindà" desplegada (vegeu buildLlindaTableCellControl,
+  // llindasection.js): amagada per defecte a cada fila, es referencien
+  // per rowIndex igual que selectedRows i es buiden pel mateix motiu
+  // (applySheetData a actions.js).
+  expandedLlindaRows: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna

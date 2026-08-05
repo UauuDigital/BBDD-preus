@@ -61,23 +61,17 @@
   color: var(--fg-secondary);
 }
 
-/* El control de doble cursor és un <fieldset>/<legend> (no un <div>/
-   <label>, com la resta de camps): els dos <input type="range"> no
-   tenen un únic control al qual associar un <label for>. Cal resetejar
-   l'estil natiu del navegador i replicar el de ".modal-field label". */
+/* El control de doble cursor és un <fieldset> sense <legend> (no un
+   <div>/<label>, com la resta de camps): els dos <input type="range">
+   no tenen un únic control al qual associar un <label for>, i el nom
+   "Llindà" ja hi és com a capçalera (de secció al modal, de columna a
+   la taula), així que no cal repetir-lo aquí. Cal resetejar l'estil
+   natiu del navegador. */
 .modal-field.range-dual-field {
   border: none;
   margin: 0;
   padding: 0;
   min-width: 0;
-}
-.modal-field.range-dual-field legend {
-  display: block;
-  padding: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--fg-secondary);
-  margin-bottom: var(--space-2);
 }
 
 /* Slider de doble cursor (Llindà Principi/Final): dos <input
@@ -198,6 +192,38 @@
   transform: translateX(-50%);
   border: 4px solid transparent;
   border-top-color: var(--color-ink);
+}
+/* L'input dins la bombolla: cap vora ni fons propis (hereta els de la
+   bombolla), text blanc igual que abans quan era text estàtic. Amplada
+   fixada des de JS (updateBubbleWidth), sense mínim propi. Especificitat
+   ".range-dual-bubble .range-dual-bubble-input" (no només la classe
+   sola): cal guanyar per sobre de ".modal-field input" (modal.css), que
+   altrament hi torna a posar vora, fons i padding sòlids (és el que la
+   feia veure massa grossa). */
+.range-dual-bubble .range-dual-bubble-input {
+  width: 1ch;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  pointer-events: auto;
+  cursor: text;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.range-dual-bubble-input::-webkit-inner-spin-button,
+.range-dual-bubble-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.range-dual-bubble .range-dual-bubble-input:focus {
+  outline: 1px solid var(--color-white);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 /* Un input numèric per cadascun dels 3 trams que dibuixen els cursors

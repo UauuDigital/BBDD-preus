@@ -26,6 +26,14 @@ function renderTable() {
   table.innerHTML = '';
 
   const visibleColIndexes = getVisibleColIndexes();
+  // Si "Llindà Principi/Final" i els 2 preus hi són tots 4 i seguits
+  // (en aquest ordre), es pinten com una sola columna amb el mateix
+  // gràfic que el pas "Llindà" del formulari de nova fila (vegeu
+  // getLlindaMergeStart/buildLlindaTableCellControl, llindasection.js).
+  // Si en falta algun o no són consecutius, cada columna es manté
+  // separada com sempre (cap sorpresa amb fulls que no segueixen aquest
+  // esquema).
+  const llindaMergeStart = getLlindaMergeStart(visibleColIndexes);
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
@@ -39,51 +47,72 @@ function renderTable() {
   thActions.appendChild(selectAll);
   headRow.appendChild(thActions);
 
-  visibleColIndexes.forEach(function (colIndex) {
+  visibleColIndexes.forEach(function (colIndex, i) {
+    // Les 3 columnes següents a on comença el grup del Llindà queden
+    // absorbides pel colSpan del <th> fusionat (vegeu més avall): no
+    // en pinten cap de pròpia.
+    if (llindaMergeStart !== null && i > llindaMergeStart && i <= llindaMergeStart + 3) return;
+    const isLlindaMerge = llindaMergeStart !== null && i === llindaMergeStart;
+
     const th = document.createElement('th');
-    const colClass = columnClassFor(state.headers[colIndex]);
-    if (colClass) th.classList.add(colClass);
-
-    const wrap = document.createElement('button');
-    wrap.type = 'button';
-    wrap.className = 'header-cell';
-    wrap.setAttribute('aria-label', 'Ordena per "' + state.headers[colIndex] + '"');
-
-    const label = document.createElement('span');
-    label.className = 'header-cell-label';
-    label.textContent = state.headers[colIndex];
-    wrap.appendChild(label);
-
-    if (state.sortColIndex === colIndex) {
-      const arrow = document.createElement('span');
-      arrow.className = 'header-cell-sort-icon';
-      arrow.innerHTML = ICONS.chevron;
-      if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
-      wrap.appendChild(arrow);
+    if (isLlindaMerge) {
+      th.colSpan = 4;
+      th.className = 'llinda-cell';
+    } else {
+      const colClass = columnClassFor(state.headers[colIndex]);
+      if (colClass) th.classList.add(colClass);
     }
-
-    wrap.addEventListener('click', function () {
-      if (state.sortColIndex === colIndex) {
-        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        state.sortColIndex = colIndex;
-        state.sortDirection = 'asc';
-      }
-      renderTable();
-    });
 
     const headerRow = document.createElement('div');
     headerRow.className = 'header-cell-row';
-    headerRow.appendChild(wrap);
 
-    // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
-    // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a la
-    // pròpia capçalera de la taula: les columnes abreujades (MÍN,
-    // PREU/P...) no haurien d'obligar a obrir el modal per entendre-les.
-    // Germana del botó d'ordenació, no filla: un <button> no pot
-    // contenir cap altre element interactiu.
-    const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
-    if (helpIcon) headerRow.appendChild(helpIcon);
+    if (isLlindaMerge) {
+      // Columna fusionada: no és una capçalera ordenable (no
+      // representa un únic valor comparable), només una etiqueta.
+      const label = document.createElement('span');
+      label.className = 'header-cell-label';
+      label.textContent = 'Llindà';
+      headerRow.appendChild(label);
+    } else {
+      const wrap = document.createElement('button');
+      wrap.type = 'button';
+      wrap.className = 'header-cell';
+      wrap.setAttribute('aria-label', 'Ordena per "' + state.headers[colIndex] + '"');
+
+      const label = document.createElement('span');
+      label.className = 'header-cell-label';
+      label.textContent = state.headers[colIndex];
+      wrap.appendChild(label);
+
+      if (state.sortColIndex === colIndex) {
+        const arrow = document.createElement('span');
+        arrow.className = 'header-cell-sort-icon';
+        arrow.innerHTML = ICONS.chevron;
+        if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
+        wrap.appendChild(arrow);
+      }
+
+      wrap.addEventListener('click', function () {
+        if (state.sortColIndex === colIndex) {
+          state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortColIndex = colIndex;
+          state.sortDirection = 'asc';
+        }
+        renderTable();
+      });
+
+      headerRow.appendChild(wrap);
+
+      // Mateixa ajuda contextual que ja existeix al formulari "+ Fila"
+      // (vegeu FIELD_HELP_TEXT a modal-fields.js), ara també visible a
+      // la pròpia capçalera de la taula: les columnes abreujades
+      // (MÍN, PREU/P...) no haurien d'obligar a obrir el modal per
+      // entendre-les. Germana del botó d'ordenació, no filla: un
+      // <button> no pot contenir cap altre element interactiu.
+      const helpIcon = buildFieldHelpIcon(state.headers[colIndex]);
+      if (helpIcon) headerRow.appendChild(helpIcon);
+    }
 
     th.appendChild(headerRow);
     headRow.appendChild(th);
@@ -185,9 +214,22 @@ function renderTable() {
     tdActions.appendChild(del);
     tr.appendChild(tdActions);
 
-    visibleColIndexes.forEach(function (colIndex) {
-      const value = row[colIndex];
+    visibleColIndexes.forEach(function (colIndex, i) {
+      // Absorbides pel colspan de la cel·la fusionada d'abaix (mateix
+      // criteri que a la capçalera).
+      if (llindaMergeStart !== null && i > llindaMergeStart && i <= llindaMergeStart + 3) return;
+
       const td = document.createElement('td');
+      if (llindaMergeStart !== null && i === llindaMergeStart) {
+        td.colSpan = 4;
+        td.className = 'llinda-cell';
+        const control = buildLlindaTableCellControl(rowIndex);
+        if (control) td.appendChild(control);
+        tr.appendChild(td);
+        return;
+      }
+
+      const value = row[colIndex];
       const colClass = columnClassFor(state.headers[colIndex]);
       if (colClass) td.classList.add(colClass);
       const control = buildTableCellControl(state.headers[colIndex], colIndex, rowIndex, value);

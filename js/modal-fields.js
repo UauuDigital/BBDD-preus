@@ -60,7 +60,7 @@ const FIELD_HELP_TEXT = {
   'Optional': 'Marca-ho si és un extra opcional, no inclòs per defecte al pressupost.',
   'quantityBased': 'Marca-ho si el preu depèn d\'una quantitat (packs, persones...) en lloc de ser un preu únic.',
   'Extres': 'Marca-ho si aquest servei té extres o variants configurables (desglossament al pas següent).',
-  'Desplegable': 'Marca-ho si aquest servei ofereix un desplegable d\'opcions amb preus diferents (es configura al pas de desglossament).',
+  'Desplegable': 'Llista d\'opcions amb preus diferents (es configura al pas de desglossament, dins d\'"ExtresLlista").',
   'Unit': 'Si el preu és per persona o per pack sencer (packs fixos, independentment del nombre de persones).',
   'ExtresLlista': 'Quins tipus d\'extra vols configurar per a aquest servei: desplegable d\'opcions, llindars per trams, o altres extres addicionals.',
   'ExtraExtresLlista': 'Quin tipus d\'extra addicional vols configurar: un camp numèric amb preu (Input Numèric) o dues opcions alternatives amb preu cada una (Switch).',

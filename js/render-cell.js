@@ -20,12 +20,25 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
     return input;
   }
 
+  // "Desplegable" desa el seu propi JSON a l'instant (dins el diàleg
+  // que obre), no a través del listener "change" genèric de més avall
+  // (que llegiria "" en no trobar cap [data-col-index] dins del botó, i
+  // sobreescriuria la llista amb una cadena buida).
+  if (header === DESPLEGABLE_HEADER) {
+    return buildDesplegableCellControl(colIndex, rowIndex, value);
+  }
+
   let control;
   if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
     // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
     // veure buida, no amb un "Selecciona..." que no aporta res (això
     // només té sentit al formulari, on encara no hi ha cap valor desat).
-    control = buildMultiselectField(colIndex, value, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
+    // "ExtresLlista": si la columna "Desplegable" d'aquesta fila ja té
+    // opcions, "desplegable" hi ha de sortir marcat sempre, encara que
+    // no s'hagi desat mai explícitament aquí (withDesplegableAutoSelected,
+    // desplegabletable.js) — sense perdre la resta de valors ja marcats.
+    const cellValue = header === 'ExtresLlista' ? withDesplegableAutoSelected(value, rowIndex) : value;
+    control = buildMultiselectField(colIndex, cellValue, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
   } else if (header === YEAR_HEADER) {
     control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
   } else if (SELECT_HEADERS.indexOf(header) !== -1) {
