@@ -206,7 +206,7 @@ function renderTable() {
     tdActions.appendChild(dup);
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'icon-btn';
+    del.className = 'icon-btn icon-btn-danger';
     del.dataset.tooltip = 'Esborra fila';
     del.setAttribute('aria-label', 'Esborra la fila ' + (rowIndex + 1));
     del.innerHTML = ICONS.trash;

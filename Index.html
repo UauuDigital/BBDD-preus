@@ -584,7 +584,11 @@ thead th:has(.field-help-icon:focus-visible) {
 }
 tr:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
-.icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
+.icon-btn:hover { color: var(--fg-primary); background: var(--bg-surface); opacity: 1; }
+/* Només accions destructives (esborra fila) es marquen en vermell: la
+   resta d'.icon-btn (duplica, cadenat...) comparteixen el hover neutre
+   d'aquí dalt. */
+.icon-btn-danger:hover { color: var(--color-danger); background: var(--color-danger-bg); }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
 /* Vinyeta a la dreta del botó (no a sota, com les pestanyes) perquè no
@@ -2425,7 +2429,7 @@ function renderTable() {
     tdActions.appendChild(dup);
     const del = document.createElement('button');
     del.type = 'button';
-    del.className = 'icon-btn';
+    del.className = 'icon-btn icon-btn-danger';
     del.dataset.tooltip = 'Esborra fila';
     del.setAttribute('aria-label', 'Esborra la fila ' + (rowIndex + 1));
     del.innerHTML = ICONS.trash;
@@ -4557,7 +4561,7 @@ function buildDesplegableListEditor(items, onChange) {
       const tdActions = document.createElement('td');
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn';
+      removeBtn.className = 'icon-btn icon-btn-danger';
       removeBtn.dataset.tooltip = 'Esborra aquesta opció';
       removeBtn.setAttribute('aria-label', 'Esborra aquesta opció');
       removeBtn.innerHTML = ICONS.trash;

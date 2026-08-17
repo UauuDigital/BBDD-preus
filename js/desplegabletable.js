@@ -108,7 +108,7 @@ function buildDesplegableListEditor(items, onChange) {
       const tdActions = document.createElement('td');
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn';
+      removeBtn.className = 'icon-btn icon-btn-danger';
       removeBtn.dataset.tooltip = 'Esborra aquesta opció';
       removeBtn.setAttribute('aria-label', 'Esborra aquesta opció');
       removeBtn.innerHTML = ICONS.trash;

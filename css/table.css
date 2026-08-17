@@ -128,7 +128,11 @@ thead th:has(.field-help-icon:focus-visible) {
 }
 tr:hover .icon-btn,
 .icon-btn:focus-visible { opacity: 1; }
-.icon-btn:hover { color: var(--color-danger); background: var(--color-danger-bg); opacity: 1; }
+.icon-btn:hover { color: var(--fg-primary); background: var(--bg-surface); opacity: 1; }
+/* Només accions destructives (esborra fila) es marquen en vermell: la
+   resta d'.icon-btn (duplica, cadenat...) comparteixen el hover neutre
+   d'aquí dalt. */
+.icon-btn-danger:hover { color: var(--color-danger); background: var(--color-danger-bg); }
 .icon-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
 /* Vinyeta a la dreta del botó (no a sota, com les pestanyes) perquè no
