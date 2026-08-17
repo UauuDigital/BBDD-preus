@@ -2679,6 +2679,9 @@ function getVisibleColIndexes() {
   const columns = getSimplifyColumns(state.currentName);
   return state.headers
     .map(function (label, colIndex) { return { label: label, colIndex: colIndex }; })
+    // "id" (autogenerat, mai editable) no s'ha de veure mai a la taula,
+    // amb independència del simplificador (vegeu isIdHeader, state.js).
+    .filter(function (item) { return !isIdHeader(item.label); })
     .filter(function (item) { return !simplifying || columns.indexOf(item.label) !== -1; })
     .map(function (item) { return item.colIndex; });
 }
