@@ -29,7 +29,9 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
   }
 
   let control;
-  if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
+  if (SERVICE_NAME_HEADERS.indexOf(header) !== -1) {
+    control = buildNameCellControl(header, colIndex, rowIndex, value);
+  } else if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
     // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
     // veure buida, no amb un "Selecciona..." que no aporta res (això
     // només té sentit al formulari, on encara no hi ha cap valor desat).
@@ -68,6 +70,81 @@ function buildTableCellControl(header, colIndex, rowIndex, value) {
     });
   });
   return control;
+}
+
+// Camp de nom (Nom Servei/NomCAST/NomENG) amb traducció automàtica als
+// altres dos idiomes en editar-lo (mateixa translateServiceName_ que fa
+// servir el formulari "+ Fila", modal.js) i un botó de cadenat per
+// evitar que una cel·la concreta es sobreescrigui amb la traducció.
+function buildNameCellControl(header, colIndex, rowIndex, value) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cell-input-name';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'cell-input';
+  input.value = value;
+  input.dataset.original = value;
+  input.dataset.colIndex = String(colIndex);
+  input.addEventListener('input', function () { input.classList.add('dirty'); });
+
+  const lockKey = rowIndex + '_' + colIndex;
+  const lockBtn = document.createElement('button');
+  lockBtn.type = 'button';
+  lockBtn.className = 'icon-btn cell-lock-btn';
+  function refreshLockBtn() {
+    const isLocked = state.lockedNameCells.has(lockKey);
+    lockBtn.innerHTML = isLocked ? ICONS.lock : ICONS.unlock;
+    lockBtn.classList.toggle('is-locked', isLocked);
+    lockBtn.setAttribute('aria-pressed', String(isLocked));
+    const tooltip = isLocked
+      ? 'Traducció automàtica blocada (clica per desblocar)'
+      : 'Bloca la traducció automàtica d\'aquest camp';
+    lockBtn.dataset.tooltip = tooltip;
+    lockBtn.setAttribute('aria-label', tooltip);
+  }
+  refreshLockBtn();
+  lockBtn.addEventListener('click', function () {
+    if (state.lockedNameCells.has(lockKey)) state.lockedNameCells.delete(lockKey);
+    else state.lockedNameCells.add(lockKey);
+    refreshLockBtn();
+  });
+
+  input.addEventListener('change', function () {
+    translateNameCellSiblings(header, rowIndex, input.value.trim(), input.closest('tr'));
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(lockBtn);
+  return wrapper;
+}
+
+// Tradueix el text d'una cel·la de nom i actualitza les cel·les
+// germanes (mateixa fila) dels altres idiomes, sense tocar les que
+// l'usuari ha blocat (state.lockedNameCells) ni la que estigui editant
+// en aquell moment.
+function translateNameCellSiblings(sourceHeader, rowIndex, text, rowTr) {
+  if (!text || !rowTr) return;
+  google.script.run
+    .withSuccessHandler(function (translations) {
+      Object.keys(translations).forEach(function (targetHeader) {
+        const targetColIndex = state.headers.indexOf(targetHeader);
+        if (targetColIndex === -1) return;
+        if (state.lockedNameCells.has(rowIndex + '_' + targetColIndex)) return;
+        const targetInput = rowTr.querySelector(
+          '.cell-input-name input[data-col-index="' + targetColIndex + '"]'
+        );
+        if (!targetInput || document.activeElement === targetInput) return;
+        const newValue = translations[targetHeader];
+        targetInput.value = newValue;
+        saveTableCell(rowIndex, targetColIndex, newValue, function () { renderTable(); }, function () {
+          targetInput.dataset.original = newValue;
+          targetInput.classList.remove('dirty');
+        });
+      });
+    })
+    .withFailureHandler(onError)
+    .translateServiceName(text, sourceHeader);
 }
 
 // L'element que ha de rebre l'aria-label: el botó visible (desplegable)

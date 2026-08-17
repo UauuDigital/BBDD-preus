@@ -184,6 +184,17 @@ tr:hover .cell-input.dirty { background: var(--color-sand-light); }
 }
 .cell-input-readonly:focus { box-shadow: none; }
 
+/* Nom Servei/NomCAST/NomENG: input + cadenat per blocar la traducció
+   automàtica (vegeu buildNameCellControl, render-cell.js). El cadenat
+   només es marca opac quan està actiu, com la resta d'.icon-btn. */
+.cell-input-name {
+  display: flex;
+  align-items: center;
+}
+.cell-input-name .cell-input { flex: 1; min-width: 0; }
+.cell-lock-btn { flex-shrink: 0; margin-right: var(--space-1); }
+.cell-lock-btn.is-locked { color: var(--fg-secondary); opacity: 1; }
+
 /* El desplegable (multiselecció/any/unit) reutilitza el mateix component
    que al modal (vegeu modal-multiselect.css), amb vora i cantonades
    pròpies. Dins la taula ha de quedar flush a la cel·la com .cell-input,
