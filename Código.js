@@ -55,6 +55,16 @@ function getSheetsMeta() {
   });
 }
 
+// Cert si totes les cel·les de la fila són buides. Google Sheets sovint
+// arrossega getLastRow() més enllà de les dades reals (format o una
+// fórmula que mostra "" copiada per avall en alguna columna): sense
+// aquest filtre, aquesta cua es veuria a la taula com una fila nova
+// completament buida cada vegada que es recarrega el full (p.ex. just
+// després de crear o esborrar una fila).
+function isBlankRow_(row) {
+  return row.every(function (cell) { return String(cell || '').trim() === ''; });
+}
+
 function getSheetData(sheetName) {
   const sheet = getSheetOrThrow_(sheetName);
   const lastRow = sheet.getLastRow();
@@ -62,7 +72,29 @@ function getSheetData(sheetName) {
   if (lastRow === 0 || lastCol === 0) return { headers: [], rows: [] };
 
   const values = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
-  return { headers: values[0], rows: values.slice(1) };
+  const rows = values.slice(1);
+  // Només es retalla la cua buida (mai una fila buida enmig de dades
+  // reals: updateCell/updateRow/deleteRow indexen les files pel seu
+  // rowIndex dins d'aquest array, +2 = fila real al full — treure'n
+  // una del mig els desquadraria).
+  let lastDataIndex = rows.length - 1;
+  while (lastDataIndex >= 0 && isBlankRow_(rows[lastDataIndex])) lastDataIndex--;
+  return { headers: values[0], rows: rows.slice(0, lastDataIndex + 1) };
+}
+
+// Última fila amb dades reals (ignorant la cua de getLastRow() que pot
+// arrossegar files buides, vegeu isBlankRow_): 1 si el full només té
+// capçalera. appendRow hi escriu a sota, en lloc de a getLastRow()+1,
+// perquè una fila nova no acabi apilada després d'aquesta cua buida.
+function getLastDataRow_(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol === 0) return 1;
+  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (!isBlankRow_(values[i])) return i + 2;
+  }
+  return 1;
 }
 
 // Nom de la columna que conté l'identificador autogenerat de cada fila
@@ -186,7 +218,7 @@ function updateRow(sheetName, rowIndex, values) {
 
 function appendRow(sheetName, values) {
   const sheet = getSheetOrThrow_(sheetName);
-  const newRow = sheet.getLastRow() + 1;
+  const newRow = getLastDataRow_(sheet) + 1;
   if (values.length > 0) {
     const headers = sheet.getRange(1, 1, 1, values.length).getValues()[0];
     const finalValues = values.map(function (value, colIndex) {
