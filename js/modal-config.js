@@ -80,6 +80,9 @@ const STEP_EXTRAS = 4;
 
 let modalStepIndex = 0;
 let modalValues = {};
+// null = formulari "+ Fila" (crea); número = índex de la fila que
+// s'està editant (modal obert des d'un clic a la taula).
+let editingRowIndex = null;
 
 function getStepColIndexes(step) {
   return step.headers

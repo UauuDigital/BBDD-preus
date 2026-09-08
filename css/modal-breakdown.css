@@ -74,6 +74,14 @@
   min-width: 0;
 }
 
+/* Vista de només lectura a la taula (buildLlindaTableCellControl,
+   llindasection.js): mateix gràfic, sense poder-lo arrossegar ni
+   editar-ne els preus (l'edició real es fa des del modal de la fila). */
+.modal-field.range-dual-field.is-readonly {
+  opacity: 0.85;
+}
+.modal-field.range-dual-field.is-readonly .range-dual-input { cursor: default; }
+
 /* Slider de doble cursor (Llindà Principi/Final): dos <input
    type="range"> superposats sobre la mateixa pista visual, amb
    pointer-events només al "thumb" de cadascun (l'única manera d'un

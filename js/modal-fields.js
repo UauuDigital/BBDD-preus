@@ -32,7 +32,7 @@ function buildFieldControl(colIndex, label, isId) {
   input.id = 'addRowField' + colIndex;
   input.dataset.colIndex = String(colIndex);
   if (isId) {
-    input.value = crypto.randomUUID();
+    input.value = editingRowIndex !== null ? (initialValue || '') : crypto.randomUUID();
     input.readOnly = true;
   } else {
     if (initialValue) input.value = initialValue;

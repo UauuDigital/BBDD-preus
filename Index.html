@@ -618,92 +618,43 @@ tr:hover .icon-btn,
    com sempre. */
 td .checkbox-field { justify-content: center; }
 
-.cell-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: var(--space-3) var(--space-3);
-  font-size: var(--text-base);
-  color: var(--fg-primary);
-  border-radius: var(--radius-sm);
-}
-tr:hover .cell-input { background: var(--bg-surface); }
-.cell-input:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
-  position: relative;
-  z-index: 1;
-}
-.cell-input.dirty { background: var(--bg-warm); }
-tr:hover .cell-input.dirty { background: var(--color-sand-light); }
-
-.cell-input-readonly {
-  color: var(--fg-tertiary);
-  cursor: default;
-}
-.cell-input-readonly:focus { box-shadow: none; }
-
-/* Nom Servei/NomCAST/NomENG: input + cadenat per blocar la traducció
-   automàtica (vegeu buildNameCellControl, render-cell.js). El cadenat
-   només es marca opac quan està actiu, com la resta d'.icon-btn. */
-.cell-input-name {
-  display: flex;
-  align-items: center;
-}
-.cell-input-name .cell-input { flex: 1; min-width: 0; }
-.cell-lock-btn { flex-shrink: 0; margin-right: var(--space-1); }
-.cell-lock-btn.is-locked { color: var(--fg-secondary); opacity: 1; }
-
-/* El desplegable (multiselecció/any/unit) reutilitza el mateix component
-   que al modal (vegeu modal-multiselect.css), amb vora i cantonades
-   pròpies. Dins la taula ha de quedar flush a la cel·la com .cell-input,
-   no com un "xip" flotant. */
-td .multiselect-trigger {
-  border: none;
-  border-radius: 0;
-  padding: var(--space-3) var(--space-3);
-  background: transparent;
-}
-tr:hover td .multiselect-trigger { background: var(--bg-surface); }
-td .multiselect-trigger:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
-}
-
-/* La fletxa, en repòs, queda molt tènue perquè la cel·la es continuï
-   veient propera a una columna de text normal, però mai desapareix del
-   tot: sense cap indici visible, res distingeix una cel·la editable
-   com a desplegable d'una de text pla (els punts de color, en canvi,
-   ja es mantenien sempre visibles). */
-td .multiselect-trigger-chevron { opacity: 0.35; }
-td .multiselect-trigger:hover .multiselect-trigger-chevron,
-td .multiselect-trigger:focus-visible .multiselect-trigger-chevron,
-td .multiselect-trigger.is-open .multiselect-trigger-chevron {
-  opacity: 1;
-}
-
-/* Cel·la de la columna "Desplegable": un botó, no un input, ja que no
-   s'hi escriu directament (obre el diàleg d'edició de la llista).
-   Mateix llenguatge visual que .cell-input/.multiselect-trigger: flush
-   a la cel·la, sense vora pròpia, es marca en passar-hi el ratolí. */
-.desplegable-cell-btn {
+/* Cel·la de només lectura: tota l'edició es fa des del modal que
+   s'obre en clicar la fila (vegeu render.js, .data-row més avall). */
+.cell-display {
   display: block;
   width: 100%;
-  border: none;
-  background: transparent;
   padding: var(--space-3) var(--space-3);
   font-size: var(--text-base);
   color: var(--fg-primary);
-  text-align: left;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
 }
-tr:hover .desplegable-cell-btn { background: var(--bg-surface); }
-.desplegable-cell-btn:focus-visible {
+
+.cell-display-check { text-align: center; color: var(--fg-secondary); }
+
+.cell-display-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.cell-display-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.cell-display-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Fila clicable (obre el modal d'edició, com "+ Fila" però precarregat):
+   la columna d'accions i el desplegable del Llindà queden fora d'aquest
+   comportament (vegeu el filtre a l'event listener, render.js). */
+.data-row { cursor: pointer; }
+.data-row:hover td:not(.row-actions-col) { background: var(--bg-surface); }
+.data-row:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
 }
 
 .row-actions-col { width: 116px; min-width: 116px; }
@@ -771,7 +722,7 @@ td.row-actions-col::after, th.row-actions-col::after {
    d'ascendència. */
 /* Sense padding propi (com la resta de td/th, regla general més
    amunt): el porta ".llinda-disclosure-toggle"/".llinda-disclosure-body"
-   de dins, igual que ".cell-input" el porta a les altres columnes. Si
+   de dins, igual que ".cell-display" el porta a les altres columnes. Si
    la td també en tingués, s'hi sumarien tots dos i la fila (fins i tot
    col·lapsada) quedaria més alta que la resta. */
 .llinda-cell { min-width: 420px; }
@@ -784,7 +735,7 @@ td.row-actions-col::after, th.row-actions-col::after {
 /* Desplegable per fila del Llindà (buildLlindaTableCellControl,
    llindasection.js): col·lapsat per defecte, mateixa alçada que una
    cel·la normal; només en obrir-lo creix la fila per encabir el
-   gràfic. Mateix llenguatge visual que .cell-input (flush a la
+   gràfic. Mateix llenguatge visual que .cell-display (flush a la
    cel·la, es marca en passar-hi el ratolí). */
 .llinda-disclosure-toggle {
   display: flex;
@@ -908,6 +859,70 @@ tr:hover .llinda-disclosure-toggle { background: var(--bg-surface); }
   /* transform en lloc de width: no força recàlcul de layout a cada
      canvi de pas (només compositor), detectat pel linter d'Impeccable. */
   transition: transform 220ms var(--ease-out);
+}
+
+/* Navegació lliure per passos (només en editar una fila, vegeu
+   renderStepsNav a modal-render.js): mateixa estètica que la barra de
+   progrés lineal de "+ Fila" (.modal-progress-fill), però partida en
+   un segment clicable per pas — es manté la barra prima de sempre,
+   només que ara cada tram és un botó que salta directament a aquell
+   pas, i els ja passats queden pintats igual que abans. */
+.modal-steps-nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+/* La zona clicable és tot el botó (inclou el número, més alt que la
+   barra), no només els 3px de la barra: cal prou espai perquè es noti
+   que és un control, no només decoració de progrés. El número, sempre
+   visible però tènue, és el que fa evident que cada tram és clicable
+   (un simple segment de barra, per si sol, es llegeix com a passiu). */
+.modal-steps-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.modal-steps-nav-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-divider);
+  transition: height 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.modal-steps-nav-item.is-active .modal-steps-nav-bar,
+.modal-steps-nav-item.is-done .modal-steps-nav-bar {
+  background: var(--color-charcoal);
+}
+.modal-steps-nav-item:hover .modal-steps-nav-bar {
+  height: 6px;
+  background: var(--fg-tertiary);
+}
+.modal-steps-nav-item.is-active:hover .modal-steps-nav-bar,
+.modal-steps-nav-item.is-done:hover .modal-steps-nav-bar {
+  background: var(--color-charcoal);
+}
+.modal-steps-nav-item:focus-visible .modal-steps-nav-bar {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.modal-steps-nav-num {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-tertiary);
+}
+.modal-steps-nav-item:hover .modal-steps-nav-num { color: var(--fg-secondary); }
+.modal-steps-nav-item.is-active .modal-steps-nav-num,
+.modal-steps-nav-item.is-done .modal-steps-nav-num {
+  color: var(--fg-primary);
 }
 
 .modal-fields {
@@ -1376,6 +1391,14 @@ tr:hover .llinda-disclosure-toggle { background: var(--bg-surface); }
   padding: 0;
   min-width: 0;
 }
+
+/* Vista de només lectura a la taula (buildLlindaTableCellControl,
+   llindasection.js): mateix gràfic, sense poder-lo arrossegar ni
+   editar-ne els preus (l'edició real es fa des del modal de la fila). */
+.modal-field.range-dual-field.is-readonly {
+  opacity: 0.85;
+}
+.modal-field.range-dual-field.is-readonly .range-dual-input { cursor: default; }
 
 /* Slider de doble cursor (Llindà Principi/Final): dos <input
    type="range"> superposats sobre la mateixa pista visual, amb
@@ -1941,6 +1964,10 @@ button.calendar-day:focus-visible {
       <div class="modal-progress" aria-hidden="true">
         <div id="addRowProgressFill" class="modal-progress-fill"></div>
       </div>
+      <!-- Només en editar una fila (editingRowIndex, modal-render.js): tots
+           els passos ja tenen valor, així que es pot saltar directament a
+           qualsevol, no cal seguir l'ordre del formulari de nova fila. -->
+      <div id="addRowStepsNav" class="modal-steps-nav" role="tablist" aria-label="Passos del formulari" hidden></div>
     </div>
     <div id="addRowFields" class="modal-fields"></div>
     <div class="modal-actions">
@@ -1964,17 +1991,6 @@ button.calendar-day:focus-visible {
     <button type="button" id="confirmCancelBtn" class="btn btn-ghost">Cancel·la</button>
     <span class="modal-actions-spacer"></span>
     <button type="button" id="confirmOkBtn" class="btn btn-danger">Esborra</button>
-  </div>
-</dialog>
-
-<dialog id="desplegableCellModal" class="modal modal-wide">
-  <div class="modal-header">
-    <h2 class="modal-title">Desplegable</h2>
-  </div>
-  <div id="desplegableCellFields" class="modal-fields"></div>
-  <div class="modal-actions">
-    <span class="modal-actions-spacer"></span>
-    <button type="button" id="desplegableCellCloseBtn" class="btn btn-primary">Tanca</button>
   </div>
 </dialog>
 
@@ -2121,12 +2137,6 @@ const state = {
   // per rowIndex igual que selectedRows i es buiden pel mateix motiu
   // (applySheetData a actions.js).
   expandedLlindaRows: new Set(),
-  // Cel·les de nom (Nom Servei/NomCAST/NomENG) blocades contra la
-  // traducció automàtica en editar-ne una altra del mateix idioma,
-  // referenciades per "rowIndex_colIndex" (vegeu buildTableCellControl,
-  // render-cell.js). Només en memòria: es buida en recarregar la
-  // pàgina, mai es desa al Sheet ni sobreviu a applySheetData.
-  lockedNameCells: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna
@@ -2406,6 +2416,20 @@ function renderTable() {
     const row = item.row;
     const rowIndex = item.rowIndex;
     const tr = document.createElement('tr');
+    tr.className = 'data-row';
+    tr.tabIndex = 0;
+    tr.setAttribute('role', 'button');
+    tr.setAttribute('aria-label', 'Edita la fila ' + (rowIndex + 1));
+    tr.addEventListener('click', function (event) {
+      if (event.target.closest('.row-actions-col, .llinda-disclosure')) return;
+      openEditRowModal(rowIndex);
+    });
+    tr.addEventListener('keydown', function (event) {
+      if (event.target !== tr) return;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openEditRowModal(rowIndex);
+    });
 
     const tdActions = document.createElement('td');
     tdActions.className = 'row-actions-col';
@@ -2455,11 +2479,7 @@ function renderTable() {
       const value = row[colIndex];
       const colClass = columnClassFor(state.headers[colIndex]);
       if (colClass) td.classList.add(colClass);
-      const control = buildTableCellControl(state.headers[colIndex], colIndex, rowIndex, value);
-      getLabelableElement(control).setAttribute(
-        'aria-label', (state.headers[colIndex] || 'Columna ' + (colIndex + 1)) + ', fila ' + (rowIndex + 1)
-      );
-      td.appendChild(control);
+      td.appendChild(buildTableCellDisplay(state.headers[colIndex], colIndex, rowIndex, value));
       tr.appendChild(td);
     });
 
@@ -2689,195 +2709,62 @@ function getVisibleColIndexes() {
     .filter(function (item) { return !simplifying || columns.indexOf(item.label) !== -1; })
     .map(function (item) { return item.colIndex; });
 }
-// Construcció del camp d'edició d'una cel·la de la taula (mateix
-// component que el formulari "+ Fila" per a les columnes que ja hi són
-// desplegable/casella/moneda) i el desat immediat en canviar-lo.
+// Visualització (no editable) d'una cel·la de la taula. Tota l'edició
+// es fa des del modal que s'obre en clicar la fila (obrirEditRowModal,
+// modal-render.js), que ja fa servir aquests mateixos tipus de camp
+// (desplegable/casella/moneda...) per a la creació — així la manera
+// d'editar una fila i de crear-ne una és sempre la mateixa.
 const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
-// Construeix el mateix tipus de camp que el formulari de "+ Fila" per
-// editar una cel·la ja existent (desplegable, casella, moneda...) en
-// lloc d'un text lliure, per a les columnes que ja són d'aquest tipus
-// al modal. idPrefix inclou la fila perquè cada control tingui un id
-// únic (una mateixa columna es repeteix a totes les files).
-function buildTableCellControl(header, colIndex, rowIndex, value) {
-  const idPrefix = 'tableCellR' + rowIndex + '_';
+// Text pla per a una cel·la, segons el tipus de columna: la mateixa
+// lògica de lectura que feia servir cada camp editable, però només per
+// mostrar-lo.
+function buildTableCellDisplay(header, colIndex, rowIndex, value) {
+  const span = document.createElement('span');
+  span.className = 'cell-display';
 
-  if (isIdHeader(header) || isDataHeader(header)) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'cell-input cell-input-readonly';
-    input.value = value;
-    input.readOnly = true;
-    return input;
-  }
-
-  // "Desplegable" desa el seu propi JSON a l'instant (dins el diàleg
-  // que obre), no a través del listener "change" genèric de més avall
-  // (que llegiria "" en no trobar cap [data-col-index] dins del botó, i
-  // sobreescriuria la llista amb una cadena buida).
   if (header === DESPLEGABLE_HEADER) {
-    return buildDesplegableCellControl(colIndex, rowIndex, value);
+    const items = parseDesplegableItems(value);
+    span.textContent = items.length
+      ? items.length + (items.length === 1 ? ' opció' : ' opcions')
+      : '';
+    return span;
   }
 
-  let control;
-  if (SERVICE_NAME_HEADERS.indexOf(header) !== -1) {
-    control = buildNameCellControl(header, colIndex, rowIndex, value);
-  } else if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
-    // veure buida, no amb un "Selecciona..." que no aporta res (això
-    // només té sentit al formulari, on encara no hi ha cap valor desat).
-    // "ExtresLlista": si la columna "Desplegable" d'aquesta fila ja té
-    // opcions, "desplegable" hi ha de sortir marcat sempre, encara que
-    // no s'hagi desat mai explícitament aquí (withDesplegableAutoSelected,
-    // desplegabletable.js) — sense perdre la resta de valors ja marcats.
+  if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
+    span.className += ' cell-display-check';
+    if (String(value).toUpperCase() === 'TRUE') span.innerHTML = ICONS.check;
+    return span;
+  }
+
+  if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
     const cellValue = header === 'ExtresLlista' ? withDesplegableAutoSelected(value, rowIndex) : value;
-    control = buildMultiselectField(colIndex, cellValue, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
-  } else if (header === YEAR_HEADER) {
-    control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
-  } else if (SELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildSelectField(colIndex, value, undefined, idPrefix, undefined, '');
-  } else if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
-    control = buildCheckboxField(colIndex, value, idPrefix);
-  } else {
-    // Els camps de moneda (Preu, Llindà preu X<0, Llindà preu 0<X) es
-    // mantenen com a text pla a la taula (com PREU/P a "Preus per dia"):
-    // el camp numèric amb "€" només és útil en crear una fila nova
-    // (formulari "+ Fila"), no per veure un valor ja formatat pel Sheet.
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'cell-input';
-    input.value = value;
-    input.dataset.original = value;
-    input.dataset.colIndex = String(colIndex);
-    input.addEventListener('input', function () { input.classList.add('dirty'); });
-    control = input;
-  }
-
-  control.addEventListener('change', function () {
-    const newValue = getCellControlValue(control);
-    saveTableCell(rowIndex, colIndex, newValue, function () { renderTable(); }, function () {
-      if (control.dataset) { control.dataset.original = newValue; }
-      control.classList.remove('dirty');
-    });
-  });
-  return control;
-}
-
-// Camp de nom (Nom Servei/NomCAST/NomENG) amb traducció automàtica als
-// altres dos idiomes en editar-lo (mateixa translateServiceName_ que fa
-// servir el formulari "+ Fila", modal.js) i un botó de cadenat per
-// evitar que una cel·la concreta es sobreescrigui amb la traducció.
-function buildNameCellControl(header, colIndex, rowIndex, value) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'cell-input-name';
-
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'cell-input';
-  input.value = value;
-  input.dataset.original = value;
-  input.dataset.colIndex = String(colIndex);
-  input.addEventListener('input', function () { input.classList.add('dirty'); });
-
-  const lockKey = rowIndex + '_' + colIndex;
-  const lockBtn = document.createElement('button');
-  lockBtn.type = 'button';
-  lockBtn.className = 'icon-btn cell-lock-btn';
-  function refreshLockBtn() {
-    const isLocked = state.lockedNameCells.has(lockKey);
-    lockBtn.innerHTML = isLocked ? ICONS.lock : ICONS.unlock;
-    lockBtn.classList.toggle('is-locked', isLocked);
-    lockBtn.setAttribute('aria-pressed', String(isLocked));
-    const tooltip = isLocked
-      ? 'Traducció automàtica blocada (clica per desblocar)'
-      : 'Bloca la traducció automàtica d\'aquest camp';
-    lockBtn.dataset.tooltip = tooltip;
-    lockBtn.setAttribute('aria-label', tooltip);
-  }
-  refreshLockBtn();
-  lockBtn.addEventListener('click', function () {
-    if (state.lockedNameCells.has(lockKey)) state.lockedNameCells.delete(lockKey);
-    else state.lockedNameCells.add(lockKey);
-    refreshLockBtn();
-  });
-
-  input.addEventListener('change', function () {
-    translateNameCellSiblings(header, rowIndex, input.value.trim(), input.closest('tr'));
-  });
-
-  wrapper.appendChild(input);
-  wrapper.appendChild(lockBtn);
-  return wrapper;
-}
-
-// Tradueix el text d'una cel·la de nom i actualitza les cel·les
-// germanes (mateixa fila) dels altres idiomes, sense tocar les que
-// l'usuari ha blocat (state.lockedNameCells) ni la que estigui editant
-// en aquell moment.
-function translateNameCellSiblings(sourceHeader, rowIndex, text, rowTr) {
-  if (!text || !rowTr) return;
-  google.script.run
-    .withSuccessHandler(function (translations) {
-      Object.keys(translations).forEach(function (targetHeader) {
-        const targetColIndex = state.headers.indexOf(targetHeader);
-        if (targetColIndex === -1) return;
-        if (state.lockedNameCells.has(rowIndex + '_' + targetColIndex)) return;
-        const targetInput = rowTr.querySelector(
-          '.cell-input-name input[data-col-index="' + targetColIndex + '"]'
-        );
-        if (!targetInput || document.activeElement === targetInput) return;
-        const newValue = translations[targetHeader];
-        targetInput.value = newValue;
-        saveTableCell(rowIndex, targetColIndex, newValue, function () { renderTable(); }, function () {
-          targetInput.dataset.original = newValue;
-          targetInput.classList.remove('dirty');
-        });
+    const parts = String(cellValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+    const getColor = CELL_OPTION_COLORS[header];
+    if (getColor && parts.length) {
+      span.className += ' cell-display-chips';
+      parts.forEach(function (part) {
+        const chip = document.createElement('span');
+        chip.className = 'cell-display-chip';
+        const dot = document.createElement('span');
+        dot.className = 'cell-display-chip-dot';
+        dot.style.background = getColor(part);
+        chip.appendChild(dot);
+        chip.appendChild(document.createTextNode(part));
+        span.appendChild(chip);
       });
-    })
-    .withFailureHandler(onError)
-    .translateServiceName(text, sourceHeader);
+    } else {
+      span.textContent = parts.join(', ');
+    }
+    return span;
+  }
+
+  span.textContent = value;
+  return span;
 }
 
-// L'element que ha de rebre l'aria-label: el botó visible (desplegable)
-// o l'input real (text/moneda/casella), mai el <input type="hidden">
-// intern d'un desplegable.
 function getLabelableElement(control) {
-  const trigger = control.querySelector && control.querySelector('.multiselect-trigger');
-  if (trigger) return trigger;
-  if (control.matches && control.matches('[data-col-index]')) return control;
-  const inner = control.querySelector && control.querySelector('[data-col-index]');
-  return inner || control;
-}
-
-// Llegeix el valor actual d'un control, sigui un <input> directe o un
-// embolcall (moneda/casella/desplegable) amb l'input real a dins.
-function getCellControlValue(control) {
-  const el = (control.matches && control.matches('[data-col-index]')) ? control : control.querySelector('[data-col-index]');
-  if (!el) return '';
-  return el.type === 'checkbox' ? (el.checked ? 'TRUE' : 'FALSE') : el.value;
-}
-
-function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
-  const original = state.rows[rowIndex][colIndex];
-  if (newValue === original) return;
-  setStatus('Desant...', 'loading');
-  google.script.run
-    .withSuccessHandler(function (result) {
-      state.rows[rowIndex][colIndex] = newValue;
-      // En editar Dia/Mes/Excepte, el backend recalcula "DATA" per a
-      // aquesta fila i en retorna el nou text: cal reflectir-ho aquí
-      // (i tornar a pintar la taula, ja que "DATA" pot estar visible).
-      const dataChanged = result && typeof result.dataColIndex === 'number';
-      if (dataChanged) state.rows[rowIndex][result.dataColIndex] = result.dataText;
-      setStatus('Desat.', 'success');
-      if (onSuccess) onSuccess();
-      if (dataChanged) renderTable();
-    })
-    .withFailureHandler(function (err) {
-      if (onRevert) onRevert();
-      onError(err, function () { saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess); });
-    })
-    .updateCell(state.currentName, rowIndex, colIndex, newValue);
+  return control;
 }
 // Navegació de cel·la a cel·la amb les fletxes, com un full de càlcul:
 // des de qualsevol control d'una cel·la de la taula, amunt/avall/
@@ -4080,10 +3967,11 @@ const LLINDA_RANGE_MAX = 500;
 // l'instant (ús a la taula, buildLlindaTableCellControl); si no,
 // el component es limita a deixar els valors als [data-col-index]
 // perquè els reculli captureStepValues en canviar de pas del modal.
-function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue, valuesSource, onFieldChange) {
+function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue, valuesSource, onFieldChange, readOnly) {
   valuesSource = valuesSource || modalValues;
   const field = document.createElement('fieldset');
-  field.className = 'modal-field range-dual-field';
+  field.className = 'modal-field range-dual-field' + (readOnly ? ' is-readonly' : '');
+  if (readOnly) field.disabled = true;
 
   const wrap = document.createElement('div');
   wrap.className = 'range-dual';
@@ -4438,7 +4326,7 @@ function buildLlindaTableCellControl(rowIndex) {
       const row = state.rows[rowIndex];
       body.appendChild(buildLlindaRangeField(
         principiColIndex, finalColIndex, row[principiColIndex], row[finalColIndex], row,
-        function (colIndex, value) { saveTableCell(rowIndex, colIndex, value); }
+        undefined, true
       ));
     }
   }
@@ -4717,81 +4605,6 @@ function buildDesplegableSection(colIndex) {
   return container;
 }
 
-// Botó de la cel·la a la taula principal (columna "Desplegable"): mostra
-// un resum ("N opcions") i, en clicar-hi, obre un diàleg amb el mateix
-// editor (taula + formulari) que al pas de desglossament, però desant
-// cada canvi a l'instant (com la resta de cel·les editables), no en
-// acabar tot un formulari de nova fila.
-function updateDesplegableCellBtnLabel(btn, items) {
-  // Cel·la buida (no "Sense opcions") quan encara no hi ha cap opció:
-  // mateix criteri que la resta de columnes sense valor a la taula
-  // (p.ex. buildMultiselectField amb placeholder ''). El botó continua
-  // sent clicable per afegir-ne la primera.
-  btn.textContent = items.length
-    ? items.length + (items.length === 1 ? ' opció' : ' opcions')
-    : '';
-}
-
-function openDesplegableCellDialog(colIndex, rowIndex, items, onSaved) {
-  const dialog = document.getElementById('desplegableCellModal');
-  const fieldsWrap = document.getElementById('desplegableCellFields');
-  fieldsWrap.innerHTML = '';
-
-  // Última versió efectivament desada al servidor: si un desat falla,
-  // "items" es reverteix a aquest JSON (i no simplement es descarta el
-  // canvi, perquè l'usuari pot haver afegit/tret més d'una opció abans
-  // que la crida fallida torni).
-  let lastSavedJson = JSON.stringify(items);
-
-  const editor = buildDesplegableListEditor(items, function () {
-    const attemptedJson = JSON.stringify(items);
-    saveTableCell(rowIndex, colIndex, attemptedJson, function () {
-      items.length = 0;
-      Array.prototype.push.apply(items, JSON.parse(lastSavedJson));
-      editor.renderRows();
-      onSaved(items);
-    }, function () {
-      lastSavedJson = attemptedJson;
-      onSaved(items);
-    });
-  });
-  fieldsWrap.appendChild(editor.element);
-
-  const closeBtn = document.getElementById('desplegableCellCloseBtn');
-  function onClose() {
-    closeBtn.removeEventListener('click', onClose);
-    dialog.removeEventListener('cancel', onClose);
-    if (dialog.open) dialog.close();
-  }
-  closeBtn.addEventListener('click', onClose);
-  // "cancel" es dispara en tancar amb Escape.
-  dialog.addEventListener('cancel', onClose);
-
-  dialog.showModal();
-}
-
-function buildDesplegableCellControl(colIndex, rowIndex, value) {
-  const items = parseDesplegableItems(value);
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'desplegable-cell-btn';
-  updateDesplegableCellBtnLabel(btn, items);
-  wireHoverTooltip(btn, 'Edita la llista d\'opcions del desplegable.');
-
-  btn.addEventListener('click', function () {
-    // renderTable() sencer (no només updateDesplegableCellBtnLabel en
-    // aquest botó): un canvi aquí també pot alterar què hi surt marcat a
-    // "ExtresLlista" d'aquesta mateixa fila (withDesplegableAutoSelected),
-    // que és una cel·la diferent i, sense repintar-la, es quedava amb el
-    // valor vell fins que l'usuari recarregava la pàgina.
-    openDesplegableCellDialog(colIndex, rowIndex, items, function () {
-      renderTable();
-    });
-  });
-
-  return btn;
-}
 // Pas 5 (condicional): secció "Input Númeric" (Unitat + Preu, desat a
 // ExtraUnitat com "Unitat,Preu") i secció "Switch" (dues opcions
 // CAT/CAST/ENG + Preu, desades a ExtraSwitch com
@@ -5050,6 +4863,9 @@ const STEP_EXTRAS = 4;
 
 let modalStepIndex = 0;
 let modalValues = {};
+// null = formulari "+ Fila" (crea); número = índex de la fila que
+// s'està editant (modal obert des d'un clic a la taula).
+let editingRowIndex = null;
 
 function getStepColIndexes(step) {
   return step.headers
@@ -5152,7 +4968,7 @@ function buildFieldControl(colIndex, label, isId) {
   input.id = 'addRowField' + colIndex;
   input.dataset.colIndex = String(colIndex);
   if (isId) {
-    input.value = crypto.randomUUID();
+    input.value = editingRowIndex !== null ? (initialValue || '') : crypto.randomUUID();
     input.readOnly = true;
   } else {
     if (initialValue) input.value = initialValue;
@@ -5435,14 +5251,29 @@ function buildAltresExtresSection() {
 // el render principal (renderModalStep) que decideix què mostrar a
 // cada pas i quins botons de navegació han de sortir.
 function openAddRowModal() {
+  editingRowIndex = null;
   modalStepIndex = STEP_GENERAL;
   modalValues = {};
   // "Optional" marcat per defecte en crear una fila nova (la immensa
   // majoria de serveis nous ho són): només afecta el formulari de nova
-  // fila, no les files ja existents de la taula (buildTableCellControl
-  // hi llegeix el valor real desat, mai passa per aquí).
+  // fila, no les files ja existents (en editar, es parteix sempre del
+  // valor real ja desat, vegeu openEditRowModal).
   const optionalColIndex = state.headers.indexOf('Optional');
   if (optionalColIndex !== -1) modalValues[optionalColIndex] = 'TRUE';
+  renderModalStep();
+  document.getElementById('addRowModal').showModal();
+}
+
+// Obre el mateix formulari per passos que "+ Fila", precarregat amb els
+// valors ja desats d'una fila existent (clic a la fila a la taula):
+// modalValues ja és indexable per colIndex igual que state.rows[rowIndex],
+// així que la resta de la infraestructura del modal (buildFieldControl,
+// captureStepValues...) funciona sense cap canvi.
+function openEditRowModal(rowIndex) {
+  editingRowIndex = rowIndex;
+  modalStepIndex = STEP_GENERAL;
+  modalValues = {};
+  state.rows[rowIndex].forEach(function (value, colIndex) { modalValues[colIndex] = value; });
   renderModalStep();
   document.getElementById('addRowModal').showModal();
 }
@@ -5458,14 +5289,87 @@ function captureStepValues() {
   });
 }
 
+// Títol d'un pas, tant si és un dels dos fixos (que el porten dins
+// getFieldSteps()) com un dels condicionals (2/3/4, que no en tenen cap
+// a la config i sempre fan servir el mateix nom genèric).
+const CONDITIONAL_STEP_TITLES = ['', '', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
+function getStepTitle(index) {
+  const steps = getFieldSteps();
+  return (steps[index] && steps[index].title) || CONDITIONAL_STEP_TITLES[index] || '';
+}
+
+// Índexs de tots els passos que existirien amb l'estat actual del
+// formulari (incloent-hi els condicionals ja actius): a diferència de
+// getPlannedStepCount (modal-state.js, que només compta quants en
+// falten per venir), aquí cal la llista completa per dibuixar-los.
+function getVisibleStepIndexes() {
+  const indexes = [STEP_GENERAL, STEP_OPTIONS];
+  if (isDetailsStepNeededLive()) {
+    indexes.push(STEP_DETAILS);
+    if (isBreakdownStepNeededLive()) {
+      indexes.push(STEP_BREAKDOWN);
+      if (isExtrasStepNeededLive()) indexes.push(STEP_EXTRAS);
+    }
+  }
+  return indexes;
+}
+
+// Navegació lliure entre passos (només en editar una fila existent,
+// vegeu renderModalStep): a diferència de "+ Fila", on cada pas nou
+// depèn de validar l'anterior perquè encara s'estan omplint els
+// camps, aquí tots ja tenen un valor real desat, així que no cal
+// forçar l'ordre ni la validació per poder saltar-hi.
+function renderStepsNav() {
+  const nav = document.getElementById('addRowStepsNav');
+  nav.hidden = editingRowIndex === null;
+  if (editingRowIndex === null) return;
+
+  nav.innerHTML = '';
+  const visibleSteps = getVisibleStepIndexes();
+  const currentPos = visibleSteps.indexOf(modalStepIndex);
+  visibleSteps.forEach(function (stepIndex, i) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'modal-steps-nav-item';
+    btn.classList.toggle('is-active', stepIndex === modalStepIndex);
+    btn.classList.toggle('is-done', i < currentPos);
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', String(stepIndex === modalStepIndex));
+    // wireHoverTooltip (no el [data-tooltip]::before habitual, layout.css):
+    // aquest botó viu a la capçalera del modal, molt a prop de la vora
+    // esquerra (pas 1) o dreta (últim pas) — una vinyeta centrada amb
+    // CSS pur hi quedaria tallada per la vora del modal en lloc de
+    // sobresortir-ne, com sí que fa aquest mecanisme (posicionat en JS,
+    // acotat només pels límits de la finestra).
+    const tooltipText = 'Pas ' + (i + 1) + ' — ' + getStepTitle(stepIndex);
+    btn.setAttribute('aria-label', tooltipText);
+    wireHoverTooltip(btn, tooltipText);
+
+    const bar = document.createElement('span');
+    bar.className = 'modal-steps-nav-bar';
+    btn.appendChild(bar);
+
+    const num = document.createElement('span');
+    num.className = 'modal-steps-nav-num';
+    num.textContent = String(i + 1);
+    btn.appendChild(num);
+
+    btn.addEventListener('click', function () {
+      if (stepIndex === modalStepIndex) return;
+      captureStepValues();
+      modalStepIndex = stepIndex;
+      renderModalStep();
+    });
+    nav.appendChild(btn);
+  });
+}
+
 function renderModalStep() {
   const fieldsWrap = document.getElementById('addRowFields');
   fieldsWrap.innerHTML = '';
 
-  const fallbackTitles = ['', '', 'Detalls addicionals', 'Detall dels extres', 'Configuració addicional'];
-  const steps = getFieldSteps();
-  const stepTitle = (steps[modalStepIndex] && steps[modalStepIndex].title) || fallbackTitles[modalStepIndex] || '';
-  document.getElementById('addRowTitle').textContent = 'Nova fila';
+  const stepTitle = getStepTitle(modalStepIndex);
+  document.getElementById('addRowTitle').textContent = editingRowIndex !== null ? 'Editar fila' : 'Nova fila';
   document.getElementById('addRowStep').textContent = 'Pas ' + (modalStepIndex + 1) + ' — ' + stepTitle;
   document.getElementById('addRowModal').classList.toggle(
     'modal-wide', modalStepIndex === STEP_BREAKDOWN || modalStepIndex === STEP_EXTRAS
@@ -5563,13 +5467,22 @@ function updateProgressBar() {
     'scaleX(' + ((modalStepIndex + 1) / plannedSteps) + ')';
 }
 
+// En editar, la navegació per passos (renderStepsNav) ja permet saltar
+// a qualsevol pas: no té sentit forçar-hi també Enrere/Següent en aquest
+// ordre ni amagar "Desa els canvis" fins al darrer pas — es pot desar
+// des de qualsevol punt, com un formulari normal.
 function updateModalNavButtons() {
+  const isEditing = editingRowIndex !== null;
   const isFirst = modalStepIndex === STEP_GENERAL;
   const isLast = isLastStep();
-  document.getElementById('addRowBackBtn').hidden = isFirst;
-  document.getElementById('addRowNextBtn').hidden = isLast;
-  document.getElementById('addRowSubmitBtn').hidden = !isLast;
-  updateProgressBar();
+  document.getElementById('addRowBackBtn').hidden = isEditing || isFirst;
+  document.getElementById('addRowNextBtn').hidden = isEditing || isLast;
+  const submitBtn = document.getElementById('addRowSubmitBtn');
+  submitBtn.hidden = !isEditing && !isLast;
+  submitBtn.textContent = isEditing ? 'Desa els canvis' : 'Crea la fila';
+  document.querySelector('.modal-progress').hidden = isEditing;
+  if (!isEditing) updateProgressBar();
+  renderStepsNav();
 }
 
 function handleModalNext() {
@@ -5629,8 +5542,10 @@ function submitAddRowForm(event) {
     return modalValues[colIndex] !== undefined ? modalValues[colIndex] : '';
   });
 
+  const rowIndex = editingRowIndex;
   closeAddRowModal();
-  submitNewRow(values);
+  if (rowIndex !== null) submitEditedRow(rowIndex, values);
+  else submitNewRow(values);
 }
 
 function submitNewRow(values) {
@@ -5639,6 +5554,14 @@ function submitNewRow(values) {
     .withSuccessHandler(loadCurrentSheet)
     .withFailureHandler(function (err) { onError(err, function () { submitNewRow(values); }); })
     .appendRow(state.currentName, values);
+}
+
+function submitEditedRow(rowIndex, values) {
+  setStatus('Desant els canvis...', 'loading');
+  google.script.run
+    .withSuccessHandler(loadCurrentSheet)
+    .withFailureHandler(function (err) { onError(err, function () { submitEditedRow(rowIndex, values); }); })
+    .updateRow(state.currentName, rowIndex, values);
 }
 // Confirmació estilitzada per a accions destructives (esborrar fila), en
 // lloc del confirm() natiu del navegador: aquest no es pot estilitzar,

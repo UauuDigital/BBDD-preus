@@ -41,8 +41,10 @@ function submitAddRowForm(event) {
     return modalValues[colIndex] !== undefined ? modalValues[colIndex] : '';
   });
 
+  const rowIndex = editingRowIndex;
   closeAddRowModal();
-  submitNewRow(values);
+  if (rowIndex !== null) submitEditedRow(rowIndex, values);
+  else submitNewRow(values);
 }
 
 function submitNewRow(values) {
@@ -51,4 +53,12 @@ function submitNewRow(values) {
     .withSuccessHandler(loadCurrentSheet)
     .withFailureHandler(function (err) { onError(err, function () { submitNewRow(values); }); })
     .appendRow(state.currentName, values);
+}
+
+function submitEditedRow(rowIndex, values) {
+  setStatus('Desant els canvis...', 'loading');
+  google.script.run
+    .withSuccessHandler(loadCurrentSheet)
+    .withFailureHandler(function (err) { onError(err, function () { submitEditedRow(rowIndex, values); }); })
+    .updateRow(state.currentName, rowIndex, values);
 }

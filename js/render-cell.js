@@ -1,190 +1,57 @@
-// Construcció del camp d'edició d'una cel·la de la taula (mateix
-// component que el formulari "+ Fila" per a les columnes que ja hi són
-// desplegable/casella/moneda) i el desat immediat en canviar-lo.
+// Visualització (no editable) d'una cel·la de la taula. Tota l'edició
+// es fa des del modal que s'obre en clicar la fila (obrirEditRowModal,
+// modal-render.js), que ja fa servir aquests mateixos tipus de camp
+// (desplegable/casella/moneda...) per a la creació — així la manera
+// d'editar una fila i de crear-ne una és sempre la mateixa.
 const CELL_OPTION_COLORS = { 'Masia': getMasiaColor, 'Masies': getMasiaColor, 'Any': getYearRelativeColor };
 
-// Construeix el mateix tipus de camp que el formulari de "+ Fila" per
-// editar una cel·la ja existent (desplegable, casella, moneda...) en
-// lloc d'un text lliure, per a les columnes que ja són d'aquest tipus
-// al modal. idPrefix inclou la fila perquè cada control tingui un id
-// únic (una mateixa columna es repeteix a totes les files).
-function buildTableCellControl(header, colIndex, rowIndex, value) {
-  const idPrefix = 'tableCellR' + rowIndex + '_';
+// Text pla per a una cel·la, segons el tipus de columna: la mateixa
+// lògica de lectura que feia servir cada camp editable, però només per
+// mostrar-lo.
+function buildTableCellDisplay(header, colIndex, rowIndex, value) {
+  const span = document.createElement('span');
+  span.className = 'cell-display';
 
-  if (isIdHeader(header) || isDataHeader(header)) {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'cell-input cell-input-readonly';
-    input.value = value;
-    input.readOnly = true;
-    return input;
-  }
-
-  // "Desplegable" desa el seu propi JSON a l'instant (dins el diàleg
-  // que obre), no a través del listener "change" genèric de més avall
-  // (que llegiria "" en no trobar cap [data-col-index] dins del botó, i
-  // sobreescriuria la llista amb una cadena buida).
   if (header === DESPLEGABLE_HEADER) {
-    return buildDesplegableCellControl(colIndex, rowIndex, value);
+    const items = parseDesplegableItems(value);
+    span.textContent = items.length
+      ? items.length + (items.length === 1 ? ' opció' : ' opcions')
+      : '';
+    return span;
   }
 
-  let control;
-  if (SERVICE_NAME_HEADERS.indexOf(header) !== -1) {
-    control = buildNameCellControl(header, colIndex, rowIndex, value);
-  } else if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
-    // "" com a placeholder: a la taula, una cel·la sense valor s'ha de
-    // veure buida, no amb un "Selecciona..." que no aporta res (això
-    // només té sentit al formulari, on encara no hi ha cap valor desat).
-    // "ExtresLlista": si la columna "Desplegable" d'aquesta fila ja té
-    // opcions, "desplegable" hi ha de sortir marcat sempre, encara que
-    // no s'hagi desat mai explícitament aquí (withDesplegableAutoSelected,
-    // desplegabletable.js) — sense perdre la resta de valors ja marcats.
+  if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
+    span.className += ' cell-display-check';
+    if (String(value).toUpperCase() === 'TRUE') span.innerHTML = ICONS.check;
+    return span;
+  }
+
+  if (MULTISELECT_HEADERS.indexOf(header) !== -1) {
     const cellValue = header === 'ExtresLlista' ? withDesplegableAutoSelected(value, rowIndex) : value;
-    control = buildMultiselectField(colIndex, cellValue, getFixedOptionsForHeader(header) || undefined, idPrefix, CELL_OPTION_COLORS[header], '');
-  } else if (header === YEAR_HEADER) {
-    control = buildYearField(colIndex, value, idPrefix, CELL_OPTION_COLORS[header]);
-  } else if (SELECT_HEADERS.indexOf(header) !== -1) {
-    control = buildSelectField(colIndex, value, undefined, idPrefix, undefined, '');
-  } else if (CHECKBOX_HEADERS.indexOf(header) !== -1) {
-    control = buildCheckboxField(colIndex, value, idPrefix);
-  } else {
-    // Els camps de moneda (Preu, Llindà preu X<0, Llindà preu 0<X) es
-    // mantenen com a text pla a la taula (com PREU/P a "Preus per dia"):
-    // el camp numèric amb "€" només és útil en crear una fila nova
-    // (formulari "+ Fila"), no per veure un valor ja formatat pel Sheet.
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'cell-input';
-    input.value = value;
-    input.dataset.original = value;
-    input.dataset.colIndex = String(colIndex);
-    input.addEventListener('input', function () { input.classList.add('dirty'); });
-    control = input;
-  }
-
-  control.addEventListener('change', function () {
-    const newValue = getCellControlValue(control);
-    saveTableCell(rowIndex, colIndex, newValue, function () { renderTable(); }, function () {
-      if (control.dataset) { control.dataset.original = newValue; }
-      control.classList.remove('dirty');
-    });
-  });
-  return control;
-}
-
-// Camp de nom (Nom Servei/NomCAST/NomENG) amb traducció automàtica als
-// altres dos idiomes en editar-lo (mateixa translateServiceName_ que fa
-// servir el formulari "+ Fila", modal.js) i un botó de cadenat per
-// evitar que una cel·la concreta es sobreescrigui amb la traducció.
-function buildNameCellControl(header, colIndex, rowIndex, value) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'cell-input-name';
-
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'cell-input';
-  input.value = value;
-  input.dataset.original = value;
-  input.dataset.colIndex = String(colIndex);
-  input.addEventListener('input', function () { input.classList.add('dirty'); });
-
-  const lockKey = rowIndex + '_' + colIndex;
-  const lockBtn = document.createElement('button');
-  lockBtn.type = 'button';
-  lockBtn.className = 'icon-btn cell-lock-btn';
-  function refreshLockBtn() {
-    const isLocked = state.lockedNameCells.has(lockKey);
-    lockBtn.innerHTML = isLocked ? ICONS.lock : ICONS.unlock;
-    lockBtn.classList.toggle('is-locked', isLocked);
-    lockBtn.setAttribute('aria-pressed', String(isLocked));
-    const tooltip = isLocked
-      ? 'Traducció automàtica blocada (clica per desblocar)'
-      : 'Bloca la traducció automàtica d\'aquest camp';
-    lockBtn.dataset.tooltip = tooltip;
-    lockBtn.setAttribute('aria-label', tooltip);
-  }
-  refreshLockBtn();
-  lockBtn.addEventListener('click', function () {
-    if (state.lockedNameCells.has(lockKey)) state.lockedNameCells.delete(lockKey);
-    else state.lockedNameCells.add(lockKey);
-    refreshLockBtn();
-  });
-
-  input.addEventListener('change', function () {
-    translateNameCellSiblings(header, rowIndex, input.value.trim(), input.closest('tr'));
-  });
-
-  wrapper.appendChild(input);
-  wrapper.appendChild(lockBtn);
-  return wrapper;
-}
-
-// Tradueix el text d'una cel·la de nom i actualitza les cel·les
-// germanes (mateixa fila) dels altres idiomes, sense tocar les que
-// l'usuari ha blocat (state.lockedNameCells) ni la que estigui editant
-// en aquell moment.
-function translateNameCellSiblings(sourceHeader, rowIndex, text, rowTr) {
-  if (!text || !rowTr) return;
-  google.script.run
-    .withSuccessHandler(function (translations) {
-      Object.keys(translations).forEach(function (targetHeader) {
-        const targetColIndex = state.headers.indexOf(targetHeader);
-        if (targetColIndex === -1) return;
-        if (state.lockedNameCells.has(rowIndex + '_' + targetColIndex)) return;
-        const targetInput = rowTr.querySelector(
-          '.cell-input-name input[data-col-index="' + targetColIndex + '"]'
-        );
-        if (!targetInput || document.activeElement === targetInput) return;
-        const newValue = translations[targetHeader];
-        targetInput.value = newValue;
-        saveTableCell(rowIndex, targetColIndex, newValue, function () { renderTable(); }, function () {
-          targetInput.dataset.original = newValue;
-          targetInput.classList.remove('dirty');
-        });
+    const parts = String(cellValue || '').split(',').map(function (part) { return part.trim(); }).filter(Boolean);
+    const getColor = CELL_OPTION_COLORS[header];
+    if (getColor && parts.length) {
+      span.className += ' cell-display-chips';
+      parts.forEach(function (part) {
+        const chip = document.createElement('span');
+        chip.className = 'cell-display-chip';
+        const dot = document.createElement('span');
+        dot.className = 'cell-display-chip-dot';
+        dot.style.background = getColor(part);
+        chip.appendChild(dot);
+        chip.appendChild(document.createTextNode(part));
+        span.appendChild(chip);
       });
-    })
-    .withFailureHandler(onError)
-    .translateServiceName(text, sourceHeader);
+    } else {
+      span.textContent = parts.join(', ');
+    }
+    return span;
+  }
+
+  span.textContent = value;
+  return span;
 }
 
-// L'element que ha de rebre l'aria-label: el botó visible (desplegable)
-// o l'input real (text/moneda/casella), mai el <input type="hidden">
-// intern d'un desplegable.
 function getLabelableElement(control) {
-  const trigger = control.querySelector && control.querySelector('.multiselect-trigger');
-  if (trigger) return trigger;
-  if (control.matches && control.matches('[data-col-index]')) return control;
-  const inner = control.querySelector && control.querySelector('[data-col-index]');
-  return inner || control;
-}
-
-// Llegeix el valor actual d'un control, sigui un <input> directe o un
-// embolcall (moneda/casella/desplegable) amb l'input real a dins.
-function getCellControlValue(control) {
-  const el = (control.matches && control.matches('[data-col-index]')) ? control : control.querySelector('[data-col-index]');
-  if (!el) return '';
-  return el.type === 'checkbox' ? (el.checked ? 'TRUE' : 'FALSE') : el.value;
-}
-
-function saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess) {
-  const original = state.rows[rowIndex][colIndex];
-  if (newValue === original) return;
-  setStatus('Desant...', 'loading');
-  google.script.run
-    .withSuccessHandler(function (result) {
-      state.rows[rowIndex][colIndex] = newValue;
-      // En editar Dia/Mes/Excepte, el backend recalcula "DATA" per a
-      // aquesta fila i en retorna el nou text: cal reflectir-ho aquí
-      // (i tornar a pintar la taula, ja que "DATA" pot estar visible).
-      const dataChanged = result && typeof result.dataColIndex === 'number';
-      if (dataChanged) state.rows[rowIndex][result.dataColIndex] = result.dataText;
-      setStatus('Desat.', 'success');
-      if (onSuccess) onSuccess();
-      if (dataChanged) renderTable();
-    })
-    .withFailureHandler(function (err) {
-      if (onRevert) onRevert();
-      onError(err, function () { saveTableCell(rowIndex, colIndex, newValue, onRevert, onSuccess); });
-    })
-    .updateCell(state.currentName, rowIndex, colIndex, newValue);
+  return control;
 }

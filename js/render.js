@@ -183,6 +183,20 @@ function renderTable() {
     const row = item.row;
     const rowIndex = item.rowIndex;
     const tr = document.createElement('tr');
+    tr.className = 'data-row';
+    tr.tabIndex = 0;
+    tr.setAttribute('role', 'button');
+    tr.setAttribute('aria-label', 'Edita la fila ' + (rowIndex + 1));
+    tr.addEventListener('click', function (event) {
+      if (event.target.closest('.row-actions-col, .llinda-disclosure')) return;
+      openEditRowModal(rowIndex);
+    });
+    tr.addEventListener('keydown', function (event) {
+      if (event.target !== tr) return;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openEditRowModal(rowIndex);
+    });
 
     const tdActions = document.createElement('td');
     tdActions.className = 'row-actions-col';
@@ -232,11 +246,7 @@ function renderTable() {
       const value = row[colIndex];
       const colClass = columnClassFor(state.headers[colIndex]);
       if (colClass) td.classList.add(colClass);
-      const control = buildTableCellControl(state.headers[colIndex], colIndex, rowIndex, value);
-      getLabelableElement(control).setAttribute(
-        'aria-label', (state.headers[colIndex] || 'Columna ' + (colIndex + 1)) + ', fila ' + (rowIndex + 1)
-      );
-      td.appendChild(control);
+      td.appendChild(buildTableCellDisplay(state.headers[colIndex], colIndex, rowIndex, value));
       tr.appendChild(td);
     });
 

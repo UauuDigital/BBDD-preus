@@ -129,12 +129,6 @@ const state = {
   // per rowIndex igual que selectedRows i es buiden pel mateix motiu
   // (applySheetData a actions.js).
   expandedLlindaRows: new Set(),
-  // Cel·les de nom (Nom Servei/NomCAST/NomENG) blocades contra la
-  // traducció automàtica en editar-ne una altra del mateix idioma,
-  // referenciades per "rowIndex_colIndex" (vegeu buildTableCellControl,
-  // render-cell.js). Només en memòria: es buida en recarregar la
-  // pàgina, mai es desa al Sheet ni sobreviu a applySheetData.
-  lockedNameCells: new Set(),
 };
 
 // Cert si la fila conté algun dels valors seleccionats a la columna

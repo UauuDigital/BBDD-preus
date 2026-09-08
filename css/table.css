@@ -162,92 +162,43 @@ tr:hover .icon-btn,
    com sempre. */
 td .checkbox-field { justify-content: center; }
 
-.cell-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: var(--space-3) var(--space-3);
-  font-size: var(--text-base);
-  color: var(--fg-primary);
-  border-radius: var(--radius-sm);
-}
-tr:hover .cell-input { background: var(--bg-surface); }
-.cell-input:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
-  position: relative;
-  z-index: 1;
-}
-.cell-input.dirty { background: var(--bg-warm); }
-tr:hover .cell-input.dirty { background: var(--color-sand-light); }
-
-.cell-input-readonly {
-  color: var(--fg-tertiary);
-  cursor: default;
-}
-.cell-input-readonly:focus { box-shadow: none; }
-
-/* Nom Servei/NomCAST/NomENG: input + cadenat per blocar la traducció
-   automàtica (vegeu buildNameCellControl, render-cell.js). El cadenat
-   només es marca opac quan està actiu, com la resta d'.icon-btn. */
-.cell-input-name {
-  display: flex;
-  align-items: center;
-}
-.cell-input-name .cell-input { flex: 1; min-width: 0; }
-.cell-lock-btn { flex-shrink: 0; margin-right: var(--space-1); }
-.cell-lock-btn.is-locked { color: var(--fg-secondary); opacity: 1; }
-
-/* El desplegable (multiselecció/any/unit) reutilitza el mateix component
-   que al modal (vegeu modal-multiselect.css), amb vora i cantonades
-   pròpies. Dins la taula ha de quedar flush a la cel·la com .cell-input,
-   no com un "xip" flotant. */
-td .multiselect-trigger {
-  border: none;
-  border-radius: 0;
-  padding: var(--space-3) var(--space-3);
-  background: transparent;
-}
-tr:hover td .multiselect-trigger { background: var(--bg-surface); }
-td .multiselect-trigger:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
-}
-
-/* La fletxa, en repòs, queda molt tènue perquè la cel·la es continuï
-   veient propera a una columna de text normal, però mai desapareix del
-   tot: sense cap indici visible, res distingeix una cel·la editable
-   com a desplegable d'una de text pla (els punts de color, en canvi,
-   ja es mantenien sempre visibles). */
-td .multiselect-trigger-chevron { opacity: 0.35; }
-td .multiselect-trigger:hover .multiselect-trigger-chevron,
-td .multiselect-trigger:focus-visible .multiselect-trigger-chevron,
-td .multiselect-trigger.is-open .multiselect-trigger-chevron {
-  opacity: 1;
-}
-
-/* Cel·la de la columna "Desplegable": un botó, no un input, ja que no
-   s'hi escriu directament (obre el diàleg d'edició de la llista).
-   Mateix llenguatge visual que .cell-input/.multiselect-trigger: flush
-   a la cel·la, sense vora pròpia, es marca en passar-hi el ratolí. */
-.desplegable-cell-btn {
+/* Cel·la de només lectura: tota l'edició es fa des del modal que
+   s'obre en clicar la fila (vegeu render.js, .data-row més avall). */
+.cell-display {
   display: block;
   width: 100%;
-  border: none;
-  background: transparent;
   padding: var(--space-3) var(--space-3);
   font-size: var(--text-base);
   color: var(--fg-primary);
-  text-align: left;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
 }
-tr:hover .desplegable-cell-btn { background: var(--bg-surface); }
-.desplegable-cell-btn:focus-visible {
+
+.cell-display-check { text-align: center; color: var(--fg-secondary); }
+
+.cell-display-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.cell-display-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.cell-display-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Fila clicable (obre el modal d'edició, com "+ Fila" però precarregat):
+   la columna d'accions i el desplegable del Llindà queden fora d'aquest
+   comportament (vegeu el filtre a l'event listener, render.js). */
+.data-row { cursor: pointer; }
+.data-row:hover td:not(.row-actions-col) { background: var(--bg-surface); }
+.data-row:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--focus-ring);
-  background: var(--bg-page);
 }
 
 .row-actions-col { width: 116px; min-width: 116px; }
@@ -315,7 +266,7 @@ td.row-actions-col::after, th.row-actions-col::after {
    d'ascendència. */
 /* Sense padding propi (com la resta de td/th, regla general més
    amunt): el porta ".llinda-disclosure-toggle"/".llinda-disclosure-body"
-   de dins, igual que ".cell-input" el porta a les altres columnes. Si
+   de dins, igual que ".cell-display" el porta a les altres columnes. Si
    la td també en tingués, s'hi sumarien tots dos i la fila (fins i tot
    col·lapsada) quedaria més alta que la resta. */
 .llinda-cell { min-width: 420px; }
@@ -328,7 +279,7 @@ td.row-actions-col::after, th.row-actions-col::after {
 /* Desplegable per fila del Llindà (buildLlindaTableCellControl,
    llindasection.js): col·lapsat per defecte, mateixa alçada que una
    cel·la normal; només en obrir-lo creix la fila per encabir el
-   gràfic. Mateix llenguatge visual que .cell-input (flush a la
+   gràfic. Mateix llenguatge visual que .cell-display (flush a la
    cel·la, es marca en passar-hi el ratolí). */
 .llinda-disclosure-toggle {
   display: flex;

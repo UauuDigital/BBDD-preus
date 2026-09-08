@@ -156,6 +156,34 @@ function updateCell(sheetName, rowIndex, colIndex, value) {
   return {};
 }
 
+// Sobreescriu tota una fila ja existent (modal d'edició): mateixa
+// lògica que appendRow per a "Id" (es manté el valor ja desat, mai es
+// regenera) i "DATA" (es recalcula sempre a partir de Dia/Mes/Excepte).
+function updateRow(sheetName, rowIndex, values) {
+  const sheet = getSheetOrThrow_(sheetName);
+  const targetRow = rowIndex + 2;
+  if (values.length > 0) {
+    const headers = sheet.getRange(1, 1, 1, values.length).getValues()[0];
+    const currentValues = sheet.getRange(targetRow, 1, 1, values.length).getValues()[0];
+    const finalValues = values.map(function (value, colIndex) {
+      if (isIdHeader_(headers[colIndex])) return currentValues[colIndex];
+      return value;
+    });
+
+    const cols = getDataFormulaColIndexes_(headers);
+    if (cols.data !== -1) {
+      finalValues[cols.data] = computeDataDescription_(
+        cols.dia !== -1 ? finalValues[cols.dia] : '',
+        cols.mes !== -1 ? finalValues[cols.mes] : '',
+        cols.excepte !== -1 ? finalValues[cols.excepte] : ''
+      );
+    }
+
+    sheet.getRange(targetRow, 1, 1, finalValues.length).setValues([finalValues]);
+  }
+  return true;
+}
+
 function appendRow(sheetName, values) {
   const sheet = getSheetOrThrow_(sheetName);
   const newRow = sheet.getLastRow() + 1;

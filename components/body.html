@@ -44,6 +44,10 @@
       <div class="modal-progress" aria-hidden="true">
         <div id="addRowProgressFill" class="modal-progress-fill"></div>
       </div>
+      <!-- Només en editar una fila (editingRowIndex, modal-render.js): tots
+           els passos ja tenen valor, així que es pot saltar directament a
+           qualsevol, no cal seguir l'ordre del formulari de nova fila. -->
+      <div id="addRowStepsNav" class="modal-steps-nav" role="tablist" aria-label="Passos del formulari" hidden></div>
     </div>
     <div id="addRowFields" class="modal-fields"></div>
     <div class="modal-actions">
@@ -67,16 +71,5 @@
     <button type="button" id="confirmCancelBtn" class="btn btn-ghost">Cancel·la</button>
     <span class="modal-actions-spacer"></span>
     <button type="button" id="confirmOkBtn" class="btn btn-danger">Esborra</button>
-  </div>
-</dialog>
-
-<dialog id="desplegableCellModal" class="modal modal-wide">
-  <div class="modal-header">
-    <h2 class="modal-title">Desplegable</h2>
-  </div>
-  <div id="desplegableCellFields" class="modal-fields"></div>
-  <div class="modal-actions">
-    <span class="modal-actions-spacer"></span>
-    <button type="button" id="desplegableCellCloseBtn" class="btn btn-primary">Tanca</button>
   </div>
 </dialog>

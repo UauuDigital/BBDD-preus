@@ -23,10 +23,11 @@ const LLINDA_RANGE_MAX = 500;
 // l'instant (ús a la taula, buildLlindaTableCellControl); si no,
 // el component es limita a deixar els valors als [data-col-index]
 // perquè els reculli captureStepValues en canviar de pas del modal.
-function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue, valuesSource, onFieldChange) {
+function buildLlindaRangeField(principiColIndex, finalColIndex, principiValue, finalValue, valuesSource, onFieldChange, readOnly) {
   valuesSource = valuesSource || modalValues;
   const field = document.createElement('fieldset');
-  field.className = 'modal-field range-dual-field';
+  field.className = 'modal-field range-dual-field' + (readOnly ? ' is-readonly' : '');
+  if (readOnly) field.disabled = true;
 
   const wrap = document.createElement('div');
   wrap.className = 'range-dual';
@@ -381,7 +382,7 @@ function buildLlindaTableCellControl(rowIndex) {
       const row = state.rows[rowIndex];
       body.appendChild(buildLlindaRangeField(
         principiColIndex, finalColIndex, row[principiColIndex], row[finalColIndex], row,
-        function (colIndex, value) { saveTableCell(rowIndex, colIndex, value); }
+        undefined, true
       ));
     }
   }
