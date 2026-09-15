@@ -35,6 +35,15 @@ function renderTable() {
   // esquema).
   const llindaMergeStart = getLlindaMergeStart(visibleColIndexes);
 
+  // Columna "Temporada" (alta/mitja/baixa): només als fulls amb vista de
+  // calendari i quan les columnes "Dia"/"Mes" hi són — és purament
+  // visual (no ve del full de càlcul), per això s'afegeix a part en
+  // lloc de ser una columna més de visibleColIndexes.
+  const diaColIndexForSeason = state.headers.indexOf('Dia');
+  const mesColIndexForSeason = state.headers.indexOf('Mes');
+  const showSeasonColumn = isCalendarViewSheet(state.currentName) && diaColIndexForSeason !== -1 && mesColIndexForSeason !== -1;
+  const extraCol = showSeasonColumn ? 1 : 0;
+
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
 
@@ -118,6 +127,45 @@ function renderTable() {
     headRow.appendChild(th);
   });
 
+  if (showSeasonColumn) {
+    const thSeason = document.createElement('th');
+    thSeason.className = 'col-narrow';
+    const headerRow = document.createElement('div');
+    headerRow.className = 'header-cell-row';
+
+    const wrap = document.createElement('button');
+    wrap.type = 'button';
+    wrap.className = 'header-cell';
+    wrap.setAttribute('aria-label', 'Ordena per "Temporada"');
+
+    const label = document.createElement('span');
+    label.className = 'header-cell-label';
+    label.textContent = 'Temporada';
+    wrap.appendChild(label);
+
+    if (state.sortColIndex === SEASON_SORT_COL) {
+      const arrow = document.createElement('span');
+      arrow.className = 'header-cell-sort-icon';
+      arrow.innerHTML = ICONS.chevron;
+      if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
+      wrap.appendChild(arrow);
+    }
+
+    wrap.addEventListener('click', function () {
+      if (state.sortColIndex === SEASON_SORT_COL) {
+        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortColIndex = SEASON_SORT_COL;
+        state.sortDirection = 'asc';
+      }
+      renderTable();
+    });
+
+    headerRow.appendChild(wrap);
+    thSeason.appendChild(headerRow);
+    headRow.appendChild(thSeason);
+  }
+
   thead.appendChild(headRow);
   table.appendChild(thead);
 
@@ -136,10 +184,20 @@ function renderTable() {
       // encara que hi hagi un filtre actiu.
       if (!rowMatchesValueFilter(item.row, diaColIndex, state.filterDia, { emptyMeansAll: true, normalize: normalizeDiaForFilter })) return false;
       if (!rowMatchesValueFilter(item.row, mesColIndex, state.filterMes, { emptyMeansAll: true, normalize: normalizeText })) return false;
+      if (showSeasonColumn && state.filterTemporada.length) {
+        const rowSeasons = getSeasonShortLabelsForRow(item.row[diaColIndexForSeason], item.row[mesColIndexForSeason]);
+        if (!rowSeasons.some(function (s) { return state.filterTemporada.indexOf(s) !== -1; })) return false;
+      }
       return true;
     });
 
-  if (state.sortColIndex !== -1) {
+  if (state.sortColIndex === SEASON_SORT_COL) {
+    const dir = state.sortDirection === 'desc' ? -1 : 1;
+    visible.sort(function (a, b) {
+      return (getSeasonSortRank(a.row[diaColIndexForSeason], a.row[mesColIndexForSeason])
+        - getSeasonSortRank(b.row[diaColIndexForSeason], b.row[mesColIndexForSeason])) * dir;
+    });
+  } else if (state.sortColIndex !== -1) {
     const dir = state.sortDirection === 'desc' ? -1 : 1;
     const sortColIndex = state.sortColIndex;
     visible.sort(function (a, b) { return compareForSort(a.row[sortColIndex], b.row[sortColIndex]) * dir; });
@@ -165,7 +223,7 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = visibleColIndexes.length + 1;
+    td.colSpan = visibleColIndexes.length + 1 + extraCol;
     td.textContent = 'Encara no hi ha cap fila. Clica "+ Fila" per afegir-ne la primera.';
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -173,7 +231,7 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = visibleColIndexes.length + 1;
+    td.colSpan = visibleColIndexes.length + 1 + extraCol;
     td.textContent = 'Cap fila coincideix amb els filtres seleccionats.';
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -249,6 +307,13 @@ function renderTable() {
       td.appendChild(buildTableCellDisplay(state.headers[colIndex], colIndex, rowIndex, value));
       tr.appendChild(td);
     });
+
+    if (showSeasonColumn) {
+      const tdSeason = document.createElement('td');
+      tdSeason.className = 'col-narrow';
+      tdSeason.appendChild(buildSeasonTableCell(row[diaColIndexForSeason], row[mesColIndexForSeason]));
+      tr.appendChild(tdSeason);
+    }
 
     tbody.appendChild(tr);
   });

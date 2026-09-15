@@ -19,6 +19,7 @@ function renderTabs() {
       state.filterAny = [];
       state.filterDia = [];
       state.filterMes = [];
+      state.filterTemporada = [];
       state.sortColIndex = -1;
       state.sortDirection = 'asc';
       state.view = 'table';

@@ -152,6 +152,8 @@ function renderCalendarMonthGrid() {
 
   container.appendChild(grid);
 
+  container.appendChild(buildSeasonLegend());
+
   const legend = buildCalendarLegend(monthMasiaNames);
   if (legend) container.appendChild(legend);
 

@@ -24,6 +24,16 @@
   --masia-vivencs: #FFD2BC;
   --masia-default: #9ca3af;
 
+  /* Temporades (calendari "Preus per dia"): alta/mitja/baixa segons dia
+     de la setmana i mes (vegeu getSeasonForDate a calendar-seasons.js).
+     Colors reaprofitats de la paleta existent perquè no en calen de nous. */
+  --season-alta:     var(--color-danger);
+  --season-alta-bg:  var(--color-danger-bg);
+  --season-mitja:    var(--year-yellow);
+  --season-mitja-bg: #fbf3d9;
+  --season-baixa:    var(--year-blue);
+  --season-baixa-bg: #e5eef2;
+
   /* "Any" (Preus per dia): mateix codi de colors que les marques de les
      abelles reines apicultores (estàndard "Will You Raise Good Bees"),
      es repeteix cada 5 anys — no per relació amb l'any actual. */

@@ -65,6 +65,44 @@ button.calendar-day:focus-visible {
   background: var(--bg-warm);
 }
 
+/* Temporada (alta/mitja/baixa): franja superior de color + un tint de
+   fons molt subtil, perquè es distingeixi d'un cop d'ull sense competir
+   amb el fons "has-price" (que es manté per sobre, ja declarat després
+   en aquest mateix nivell d'especificitat). */
+.calendar-day.season-alta  { border-top: 3px solid var(--season-alta);  background: var(--season-alta-bg); }
+.calendar-day.season-mitja { border-top: 3px solid var(--season-mitja); background: var(--season-mitja-bg); }
+.calendar-day.season-baixa { border-top: 3px solid var(--season-baixa); background: var(--season-baixa-bg); }
+
+.calendar-day.season-alta.has-price,
+.calendar-day.season-mitja.has-price,
+.calendar-day.season-baixa.has-price {
+  background: var(--bg-warm);
+}
+
+.calendar-season-legend { margin-top: var(--space-3); }
+.calendar-season-dot { width: 10px; height: 10px; border-radius: 3px; }
+.calendar-season-dot.season-alta  { background: var(--season-alta); }
+.calendar-season-dot.season-mitja { background: var(--season-mitja); }
+.calendar-season-dot.season-baixa { background: var(--season-baixa); }
+
+/* Columna "Temporada" de la taula (fulls amb vista de calendari, vegeu
+   buildSeasonTableCell a calendar-seasons.js): el nom escrit amb el
+   color de la temporada, no un punt — més llegible d'un cop d'ull a
+   la taula que un simple indicador de color. */
+.season-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.season-label.season-alta  { color: var(--season-alta); }
+.season-label.season-mitja { color: color-mix(in srgb, var(--season-mitja) 75%, black); }
+.season-label.season-baixa { color: var(--season-baixa); }
+
 .calendar-day-prices {
   display: flex;
   flex-direction: column;

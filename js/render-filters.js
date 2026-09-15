@@ -7,11 +7,12 @@ function clearAllFilters() {
   state.filterMes = [];
   state.filterMasia = [];
   state.filterAny = [];
+  state.filterTemporada = [];
   renderCurrentView();
 }
 
 function hasAnyFilterSelected() {
-  return Boolean(state.filterDia.length || state.filterMes.length || state.filterMasia.length || state.filterAny.length);
+  return Boolean(state.filterDia.length || state.filterMes.length || state.filterMasia.length || state.filterAny.length || state.filterTemporada.length);
 }
 
 // Colors d'opció per filtre, quan n'hi ha (vegeu getMasiaColor a
@@ -75,6 +76,11 @@ function renderFilters() {
       const field = buildFilterField(def);
       if (field) tableContainer.appendChild(field);
     });
+    // "Temporada" no és una columna real del full (vegeu buildSeasonTableCell,
+    // calendar-seasons.js), per això no passa per buildFilterField.
+    if (isCalendarViewSheet(state.currentName)) {
+      tableContainer.appendChild(buildSeasonFilterField());
+    }
     tableContainer.appendChild(buildClearFiltersButton(hasAnyFilterSelected()));
   }
 

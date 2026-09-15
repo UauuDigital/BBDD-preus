@@ -34,6 +34,16 @@
   --masia-vivencs: #FFD2BC;
   --masia-default: #9ca3af;
 
+  /* Temporades (calendari "Preus per dia"): alta/mitja/baixa segons dia
+     de la setmana i mes (vegeu getSeasonForDate a calendar-seasons.js).
+     Colors reaprofitats de la paleta existent perquè no en calen de nous. */
+  --season-alta:     var(--color-danger);
+  --season-alta-bg:  var(--color-danger-bg);
+  --season-mitja:    var(--year-yellow);
+  --season-mitja-bg: #fbf3d9;
+  --season-baixa:    var(--year-blue);
+  --season-baixa-bg: #e5eef2;
+
   /* "Any" (Preus per dia): mateix codi de colors que les marques de les
      abelles reines apicultores (estàndard "Will You Raise Good Bees"),
      es repeteix cada 5 anys — no per relació amb l'any actual. */
@@ -1854,6 +1864,44 @@ button.calendar-day:focus-visible {
   background: var(--bg-warm);
 }
 
+/* Temporada (alta/mitja/baixa): franja superior de color + un tint de
+   fons molt subtil, perquè es distingeixi d'un cop d'ull sense competir
+   amb el fons "has-price" (que es manté per sobre, ja declarat després
+   en aquest mateix nivell d'especificitat). */
+.calendar-day.season-alta  { border-top: 3px solid var(--season-alta);  background: var(--season-alta-bg); }
+.calendar-day.season-mitja { border-top: 3px solid var(--season-mitja); background: var(--season-mitja-bg); }
+.calendar-day.season-baixa { border-top: 3px solid var(--season-baixa); background: var(--season-baixa-bg); }
+
+.calendar-day.season-alta.has-price,
+.calendar-day.season-mitja.has-price,
+.calendar-day.season-baixa.has-price {
+  background: var(--bg-warm);
+}
+
+.calendar-season-legend { margin-top: var(--space-3); }
+.calendar-season-dot { width: 10px; height: 10px; border-radius: 3px; }
+.calendar-season-dot.season-alta  { background: var(--season-alta); }
+.calendar-season-dot.season-mitja { background: var(--season-mitja); }
+.calendar-season-dot.season-baixa { background: var(--season-baixa); }
+
+/* Columna "Temporada" de la taula (fulls amb vista de calendari, vegeu
+   buildSeasonTableCell a calendar-seasons.js): el nom escrit amb el
+   color de la temporada, no un punt — més llegible d'un cop d'ull a
+   la taula que un simple indicador de color. */
+.season-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.season-label.season-alta  { color: var(--season-alta); }
+.season-label.season-mitja { color: color-mix(in srgb, var(--season-mitja) 75%, black); }
+.season-label.season-baixa { color: var(--season-baixa); }
+
 .calendar-day-prices {
   display: flex;
   flex-direction: column;
@@ -2115,6 +2163,9 @@ const state = {
   filterAny: [],
   filterDia: [],
   filterMes: [],
+  // Temporada (Alta/Mitja/Baixa): filtre purament visual, no ve d'una
+  // columna real del full (vegeu calendar-seasons.js).
+  filterTemporada: [],
   simplifyTable: true,
   sortColIndex: -1,
   sortDirection: 'asc',
@@ -2268,6 +2319,15 @@ function renderTable() {
   // esquema).
   const llindaMergeStart = getLlindaMergeStart(visibleColIndexes);
 
+  // Columna "Temporada" (alta/mitja/baixa): només als fulls amb vista de
+  // calendari i quan les columnes "Dia"/"Mes" hi són — és purament
+  // visual (no ve del full de càlcul), per això s'afegeix a part en
+  // lloc de ser una columna més de visibleColIndexes.
+  const diaColIndexForSeason = state.headers.indexOf('Dia');
+  const mesColIndexForSeason = state.headers.indexOf('Mes');
+  const showSeasonColumn = isCalendarViewSheet(state.currentName) && diaColIndexForSeason !== -1 && mesColIndexForSeason !== -1;
+  const extraCol = showSeasonColumn ? 1 : 0;
+
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
 
@@ -2351,6 +2411,45 @@ function renderTable() {
     headRow.appendChild(th);
   });
 
+  if (showSeasonColumn) {
+    const thSeason = document.createElement('th');
+    thSeason.className = 'col-narrow';
+    const headerRow = document.createElement('div');
+    headerRow.className = 'header-cell-row';
+
+    const wrap = document.createElement('button');
+    wrap.type = 'button';
+    wrap.className = 'header-cell';
+    wrap.setAttribute('aria-label', 'Ordena per "Temporada"');
+
+    const label = document.createElement('span');
+    label.className = 'header-cell-label';
+    label.textContent = 'Temporada';
+    wrap.appendChild(label);
+
+    if (state.sortColIndex === SEASON_SORT_COL) {
+      const arrow = document.createElement('span');
+      arrow.className = 'header-cell-sort-icon';
+      arrow.innerHTML = ICONS.chevron;
+      if (state.sortDirection === 'asc') arrow.classList.add('is-asc');
+      wrap.appendChild(arrow);
+    }
+
+    wrap.addEventListener('click', function () {
+      if (state.sortColIndex === SEASON_SORT_COL) {
+        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortColIndex = SEASON_SORT_COL;
+        state.sortDirection = 'asc';
+      }
+      renderTable();
+    });
+
+    headerRow.appendChild(wrap);
+    thSeason.appendChild(headerRow);
+    headRow.appendChild(thSeason);
+  }
+
   thead.appendChild(headRow);
   table.appendChild(thead);
 
@@ -2369,10 +2468,20 @@ function renderTable() {
       // encara que hi hagi un filtre actiu.
       if (!rowMatchesValueFilter(item.row, diaColIndex, state.filterDia, { emptyMeansAll: true, normalize: normalizeDiaForFilter })) return false;
       if (!rowMatchesValueFilter(item.row, mesColIndex, state.filterMes, { emptyMeansAll: true, normalize: normalizeText })) return false;
+      if (showSeasonColumn && state.filterTemporada.length) {
+        const rowSeasons = getSeasonShortLabelsForRow(item.row[diaColIndexForSeason], item.row[mesColIndexForSeason]);
+        if (!rowSeasons.some(function (s) { return state.filterTemporada.indexOf(s) !== -1; })) return false;
+      }
       return true;
     });
 
-  if (state.sortColIndex !== -1) {
+  if (state.sortColIndex === SEASON_SORT_COL) {
+    const dir = state.sortDirection === 'desc' ? -1 : 1;
+    visible.sort(function (a, b) {
+      return (getSeasonSortRank(a.row[diaColIndexForSeason], a.row[mesColIndexForSeason])
+        - getSeasonSortRank(b.row[diaColIndexForSeason], b.row[mesColIndexForSeason])) * dir;
+    });
+  } else if (state.sortColIndex !== -1) {
     const dir = state.sortDirection === 'desc' ? -1 : 1;
     const sortColIndex = state.sortColIndex;
     visible.sort(function (a, b) { return compareForSort(a.row[sortColIndex], b.row[sortColIndex]) * dir; });
@@ -2398,7 +2507,7 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = visibleColIndexes.length + 1;
+    td.colSpan = visibleColIndexes.length + 1 + extraCol;
     td.textContent = 'Encara no hi ha cap fila. Clica "+ Fila" per afegir-ne la primera.';
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -2406,7 +2515,7 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'empty-row';
     const td = document.createElement('td');
-    td.colSpan = visibleColIndexes.length + 1;
+    td.colSpan = visibleColIndexes.length + 1 + extraCol;
     td.textContent = 'Cap fila coincideix amb els filtres seleccionats.';
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -2483,6 +2592,13 @@ function renderTable() {
       tr.appendChild(td);
     });
 
+    if (showSeasonColumn) {
+      const tdSeason = document.createElement('td');
+      tdSeason.className = 'col-narrow';
+      tdSeason.appendChild(buildSeasonTableCell(row[diaColIndexForSeason], row[mesColIndexForSeason]));
+      tr.appendChild(tdSeason);
+    }
+
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -2527,6 +2643,7 @@ function renderTabs() {
       state.filterAny = [];
       state.filterDia = [];
       state.filterMes = [];
+      state.filterTemporada = [];
       state.sortColIndex = -1;
       state.sortDirection = 'asc';
       state.view = 'table';
@@ -2607,11 +2724,12 @@ function clearAllFilters() {
   state.filterMes = [];
   state.filterMasia = [];
   state.filterAny = [];
+  state.filterTemporada = [];
   renderCurrentView();
 }
 
 function hasAnyFilterSelected() {
-  return Boolean(state.filterDia.length || state.filterMes.length || state.filterMasia.length || state.filterAny.length);
+  return Boolean(state.filterDia.length || state.filterMes.length || state.filterMasia.length || state.filterAny.length || state.filterTemporada.length);
 }
 
 // Colors d'opció per filtre, quan n'hi ha (vegeu getMasiaColor a
@@ -2675,6 +2793,11 @@ function renderFilters() {
       const field = buildFilterField(def);
       if (field) tableContainer.appendChild(field);
     });
+    // "Temporada" no és una columna real del full (vegeu buildSeasonTableCell,
+    // calendar-seasons.js), per això no passa per buildFilterField.
+    if (isCalendarViewSheet(state.currentName)) {
+      tableContainer.appendChild(buildSeasonFilterField());
+    }
     tableContainer.appendChild(buildClearFiltersButton(hasAnyFilterSelected()));
   }
 
@@ -3011,6 +3134,142 @@ function sortMasiaNames(names) {
     return rankDiff !== 0 ? rankDiff : a.localeCompare(b, 'ca');
   });
 }
+// Temporada (alta / mitja / baixa) segons dia de la setmana i mes.
+// Regla purament de calendari (no depèn de les dades del full): es fa
+// servir només per pintar la graella, no per filtrar files.
+//
+// - Alta:  dissabtes de maig, juny, juliol, agost, setembre, octubre i novembre.
+// - Mitja: dissabtes d'abril; divendres de maig, juny, juliol, agost, setembre i octubre.
+// - Baixa: la resta (dilluns-dijous i diumenges sempre; dissabtes de
+//   gener, febrer, març i desembre; divendres de gener, febrer, març,
+//   abril, novembre i desembre).
+const SEASON_META = {
+  alta:  { label: 'Temporada alta',  shortLabel: 'Alta',  className: 'season-alta' },
+  mitja: { label: 'Temporada mitja', shortLabel: 'Mitja', className: 'season-mitja' },
+  baixa: { label: 'Temporada baixa', shortLabel: 'Baixa', className: 'season-baixa' }
+};
+
+function getSeasonForWeekdayMonth(weekday, month) {
+  if (weekday === 6) { // dissabte
+    if (month >= 4 && month <= 10) return 'alta'; // maig-novembre
+    if (month === 3) return 'mitja'; // abril
+    return 'baixa'; // gener, febrer, març, desembre
+  }
+  if (weekday === 5) { // divendres
+    if (month >= 4 && month <= 9) return 'mitja'; // maig-octubre
+    return 'baixa'; // gener, febrer, març, abril, novembre, desembre
+  }
+  return 'baixa'; // dilluns, dimarts, dimecres, dijous, diumenge
+}
+
+function getSeasonForDate(date) {
+  return getSeasonForWeekdayMonth(date.getDay(), date.getMonth());
+}
+
+// Temporades que cobreix una regla de la taula (columnes "Dia"/"Mes",
+// que poden llistar-ne diversos separats per comes, o quedar buides
+// per dir "tots"): a diferència de getSeasonForDate, aquí no hi ha una
+// data concreta, així que es calcula el conjunt de totes les temporades
+// possibles combinant cada dia de la setmana amb cada mes de la regla.
+function getSeasonsForRuleValues(diaRaw, mesRaw) {
+  const diaTrim = String(diaRaw || '').trim();
+  const mesTrim = String(mesRaw || '').trim();
+
+  const weekdays = diaTrim
+    ? diaTrim.split(',').map(function (part) { return normalizeWeekdayName(part); }).filter(function (w) { return w !== null; })
+    : [0, 1, 2, 3, 4, 5, 6];
+
+  const months = mesTrim
+    ? mesTrim.split(',').map(function (part) { return normalizeText(part).trim(); })
+      .map(function (name) { return MONTH_NAMES_CA.findIndex(function (m) { return normalizeText(m) === name; }); })
+      .filter(function (m) { return m !== -1; })
+    : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+  const found = [];
+  weekdays.forEach(function (weekday) {
+    months.forEach(function (month) {
+      const season = getSeasonForWeekdayMonth(weekday, month);
+      if (found.indexOf(season) === -1) found.push(season);
+    });
+  });
+
+  return ['alta', 'mitja', 'baixa'].filter(function (s) { return found.indexOf(s) !== -1; });
+}
+
+// Cel·la de la columna "Temporada" a la taula: el nom de la temporada
+// escrit amb el seu color (normalment una sola; més d'una, separades
+// per "/", si la regla combina mesos/dies de temporades diferents).
+function buildSeasonTableCell(diaRaw, mesRaw) {
+  const wrap = document.createElement('span');
+  wrap.className = 'season-cell';
+  const seasons = getSeasonsForRuleValues(diaRaw, mesRaw);
+  if (!seasons.length) return wrap;
+  seasons.forEach(function (season, i) {
+    if (i > 0) wrap.appendChild(document.createTextNode(' / '));
+    const label = document.createElement('span');
+    label.className = 'season-label ' + SEASON_META[season].className;
+    label.textContent = SEASON_META[season].shortLabel;
+    wrap.appendChild(label);
+  });
+  wrap.setAttribute('aria-label', seasons.map(function (s) { return SEASON_META[s].label; }).join(', '));
+  return wrap;
+}
+
+const SEASON_SHORT_LABEL_TO_KEY = { Alta: 'alta', Mitja: 'mitja', Baixa: 'baixa' };
+
+function getSeasonFilterColor(shortLabel) {
+  const key = SEASON_SHORT_LABEL_TO_KEY[shortLabel];
+  return key ? 'var(--' + SEASON_META[key].className + ')' : null;
+}
+
+// Filtre "Temporada" de la taula: com no és una columna real del full,
+// no passa per buildFilterField (que busca l'índex de la columna a
+// state.headers) — es construeix i s'aplica a part, vegeu render-filters.js.
+function buildSeasonFilterField() {
+  const options = ['Alta', 'Mitja', 'Baixa'];
+  const field = buildDropdownField(-1, state.filterTemporada.join(', '), options, true, 'tableFilter', 'Temporada', getSeasonFilterColor);
+  field.classList.add('table-filter');
+  const hiddenInput = field.querySelector('input[type="hidden"]');
+  field.addEventListener('change', function () {
+    state.filterTemporada = hiddenInput.value ? hiddenInput.value.split(',').map(function (v) { return v.trim(); }).filter(Boolean) : [];
+    renderCurrentView();
+  });
+  return field;
+}
+
+// Temporades (nom curt: Alta/Mitja/Baixa) que cobreix una fila, per
+// filtrar-la i per ordenar-la (vegeu render.js).
+function getSeasonShortLabelsForRow(diaRaw, mesRaw) {
+  return getSeasonsForRuleValues(diaRaw, mesRaw).map(function (s) { return SEASON_META[s].shortLabel; });
+}
+
+// sortColIndex especial (fora del rang real de columnes) per marcar que
+// s'ordena per la columna virtual "Temporada" (vegeu render.js).
+const SEASON_SORT_COL = -2;
+
+// Rang per ordenar per Temporada: la més "alta" de les que cobreix la
+// regla (si en combina diverses, la que xoca primer amb l'ull en ordenar
+// ascendent és la de temporada més alta).
+function getSeasonSortRank(diaRaw, mesRaw) {
+  const seasons = getSeasonsForRuleValues(diaRaw, mesRaw);
+  if (!seasons.length) return 3;
+  return { alta: 0, mitja: 1, baixa: 2 }[seasons[0]];
+}
+
+function buildSeasonLegend() {
+  const legend = document.createElement('div');
+  legend.className = 'calendar-legend calendar-season-legend';
+  ['alta', 'mitja', 'baixa'].forEach(function (key) {
+    const item = document.createElement('span');
+    item.className = 'calendar-legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'calendar-day-dot calendar-season-dot ' + SEASON_META[key].className;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(SEASON_META[key].label));
+    legend.appendChild(item);
+  });
+  return legend;
+}
 // Navegació del calendari: enllaç "enrere" (torna al nivell anterior)
 // i la capçalera de mes (fletxes anterior/següent + "Avui").
 function buildCalendarBackLink(label, onClick) {
@@ -3075,7 +3334,8 @@ function buildCalendarDayCell(cellDate, matches, cols, isToday) {
   // .is-expanded), no només amb el hover del "title".
   const cell = document.createElement(matches.length ? 'button' : 'div');
   if (matches.length) cell.type = 'button';
-  cell.className = 'calendar-day' + (matches.length ? ' has-price' : '') + (isToday ? ' is-today' : '');
+  const seasonClass = SEASON_META[getSeasonForDate(cellDate)].className;
+  cell.className = 'calendar-day ' + seasonClass + (matches.length ? ' has-price' : '') + (isToday ? ' is-today' : '');
 
   const dayNumber = document.createElement('span');
   dayNumber.className = 'calendar-day-number';
@@ -3409,6 +3669,8 @@ function renderCalendarMonthGrid() {
   }
 
   container.appendChild(grid);
+
+  container.appendChild(buildSeasonLegend());
 
   const legend = buildCalendarLegend(monthMasiaNames);
   if (legend) container.appendChild(legend);

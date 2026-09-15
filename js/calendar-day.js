@@ -7,7 +7,8 @@ function buildCalendarDayCell(cellDate, matches, cols, isToday) {
   // .is-expanded), no només amb el hover del "title".
   const cell = document.createElement(matches.length ? 'button' : 'div');
   if (matches.length) cell.type = 'button';
-  cell.className = 'calendar-day' + (matches.length ? ' has-price' : '') + (isToday ? ' is-today' : '');
+  const seasonClass = SEASON_META[getSeasonForDate(cellDate)].className;
+  cell.className = 'calendar-day ' + seasonClass + (matches.length ? ' has-price' : '') + (isToday ? ' is-today' : '');
 
   const dayNumber = document.createElement('span');
   dayNumber.className = 'calendar-day-number';

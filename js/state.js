@@ -107,6 +107,9 @@ const state = {
   filterAny: [],
   filterDia: [],
   filterMes: [],
+  // Temporada (Alta/Mitja/Baixa): filtre purament visual, no ve d'una
+  // columna real del full (vegeu calendar-seasons.js).
+  filterTemporada: [],
   simplifyTable: true,
   sortColIndex: -1,
   sortDirection: 'asc',
