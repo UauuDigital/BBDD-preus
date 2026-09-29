@@ -15,7 +15,7 @@ function renderCalendarYears() {
   const cols = getCalendarColIndexes();
   const rows = getCalendarRows();
   const currentYear = new Date().getFullYear();
-  [currentYear - 1, currentYear, currentYear + 1].forEach(function (year) {
+  [currentYear, currentYear + 1, currentYear + 2].forEach(function (year) {
     const masiaNames = getMasiaNamesForYear(rows, cols, year);
     const card = document.createElement('button');
     card.type = 'button';
