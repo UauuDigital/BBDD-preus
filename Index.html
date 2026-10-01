@@ -1626,6 +1626,22 @@ tr:hover .llinda-disclosure-toggle { background: var(--bg-surface); }
   padding: var(--space-2);
 }
 .desplegable-table td:last-child { width: 32px; text-align: center; }
+.desplegable-table td.desplegable-actions { width: 72px; white-space: nowrap; }
+
+.desplegable-row-editing input {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  width: 100%;
+  min-width: 0;
+}
+.desplegable-row-editing input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+.desplegable-row-editing .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .desplegable-empty {
   color: var(--fg-tertiary);
@@ -2045,7 +2061,9 @@ button.calendar-day:focus-visible {
   <script>
 const ICONS = {
   trash: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.25h11M5.5 4.25V2.75a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5m2 0-.62 8.66a1 1 0 0 1-1 .93H5.12a1 1 0 0 1-1-.93L3.5 4.25"/><path d="M6.5 7.25v4M9.5 7.25v4"/></svg>',
-  plus: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2.5v11M2.5 8h11"/></svg>',
+  pencil: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5 13.5 5.5 5.25 13.75 2 14l.25-3.25z"/></svg>',
+  close: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+  plus:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2.5v11M2.5 8h11"/></svg>',
   refresh: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.62-3.9M13.5 2.3v3.3h-3.3"/></svg>',
   chevron: '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.25 8 10l4-3.75"/></svg>',
   check: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>',
@@ -4611,6 +4629,9 @@ const DESPLEGABLE_HEADER = 'Desplegable';
 // (amb debounce, com el mateix mecanisme del pas "Informació general").
 function wireLangAutoTranslate(fields) {
   fields.forEach(function (field) {
+    // Només el camp en català tradueix cap als altres; editar el
+    // castellà o l'anglès a mà mai no dispara cap traducció.
+    if (field.lang !== 'ca') return;
     const triggerTranslate = debounce(function () {
       const text = field.input.value.trim();
       if (!text) return;
@@ -4689,8 +4710,12 @@ function buildDesplegableListEditor(items, onChange) {
   const tbody = document.createElement('tbody');
   table.appendChild(tbody);
 
+  // Índex de l'opció que s'està editant en línia (-1 si cap).
+  let editingIndex = -1;
+
   function renderRows() {
     tbody.innerHTML = '';
+    if (editingIndex >= items.length) editingIndex = -1;
     if (!items.length) {
       const emptyRow = document.createElement('tr');
       const emptyCell = document.createElement('td');
@@ -4702,28 +4727,114 @@ function buildDesplegableListEditor(items, onChange) {
       return;
     }
     items.forEach(function (item, index) {
-      const tr = document.createElement('tr');
-      [item.CAT, item.CAST, item.ENG, item.PREU + ' €'].forEach(function (text) {
-        const td = document.createElement('td');
-        td.textContent = text;
-        tr.appendChild(td);
-      });
-      const tdActions = document.createElement('td');
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn icon-btn-danger';
-      removeBtn.dataset.tooltip = 'Esborra aquesta opció';
-      removeBtn.setAttribute('aria-label', 'Esborra aquesta opció');
-      removeBtn.innerHTML = ICONS.trash;
-      removeBtn.addEventListener('click', function () {
-        items.splice(index, 1);
-        renderRows();
-        onChange();
-      });
-      tdActions.appendChild(removeBtn);
-      tr.appendChild(tdActions);
-      tbody.appendChild(tr);
+      tbody.appendChild(index === editingIndex ? buildEditRow(item) : buildReadRow(item, index));
     });
+  }
+
+  function buildIconButton(className, label, icon, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = className;
+    btn.dataset.tooltip = label;
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = icon;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function buildReadRow(item, index) {
+    const tr = document.createElement('tr');
+    [item.CAT, item.CAST, item.ENG, item.PREU + ' €'].forEach(function (text) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+    const tdActions = document.createElement('td');
+    tdActions.className = 'desplegable-actions';
+    tdActions.appendChild(buildIconButton('icon-btn', 'Edita aquesta opció', ICONS.pencil, function () {
+      editingIndex = index;
+      renderRows();
+    }));
+    tdActions.appendChild(buildIconButton('icon-btn icon-btn-danger', 'Esborra aquesta opció', ICONS.trash, function () {
+      if (editingIndex !== -1 && index < editingIndex) editingIndex--;
+      else if (index === editingIndex) editingIndex = -1;
+      items.splice(index, 1);
+      renderRows();
+      onChange();
+    }));
+    tr.appendChild(tdActions);
+    return tr;
+  }
+
+  // Fila en mode edició: 4 inputs sense traducció automàtica (editar el
+  // nom d'una opció ja existent no ha de sobreescriure els altres idiomes).
+  function buildEditRow(item) {
+    const tr = document.createElement('tr');
+    tr.className = 'desplegable-row-editing';
+    const fields = [
+      { key: 'CAT', label: 'Nom en català', type: 'text', value: item.CAT },
+      { key: 'CAST', label: 'Nom en castellà', type: 'text', value: item.CAST },
+      { key: 'ENG', label: 'Nom en anglès', type: 'text', value: item.ENG },
+      { key: 'PREU', label: 'Preu', type: 'number', value: item.PREU },
+    ];
+    const inputs = fields.map(function (field) {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = field.type;
+      if (field.type === 'number') input.step = '0.01';
+      input.value = field.value;
+      input.setAttribute('aria-label', field.label);
+      td.appendChild(input);
+      tr.appendChild(td);
+      return input;
+    });
+
+    function isValid() {
+      return inputs[0].value.trim() && inputs[1].value.trim() && inputs[2].value.trim() && inputs[3].value !== '';
+    }
+    function save() {
+      if (!isValid()) return;
+      item.CAT = inputs[0].value.trim();
+      item.CAST = inputs[1].value.trim();
+      item.ENG = inputs[2].value.trim();
+      item.PREU = Number(inputs[3].value);
+      editingIndex = -1;
+      renderRows();
+      onChange();
+    }
+    function cancel() {
+      editingIndex = -1;
+      renderRows();
+    }
+
+    const saveBtn = buildIconButton('icon-btn', 'Desa els canvis', ICONS.check, save);
+    function refreshSaveBtn() { saveBtn.disabled = !isValid(); }
+    refreshSaveBtn();
+
+    inputs.forEach(function (input) {
+      input.addEventListener('input', refreshSaveBtn);
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          save();
+        } else if (event.key === 'Escape') {
+          // Evita que l'Escape tanqui també el modal sencer.
+          event.preventDefault();
+          event.stopPropagation();
+          cancel();
+        }
+      });
+    });
+
+    const tdActions = document.createElement('td');
+    tdActions.className = 'desplegable-actions';
+    tdActions.appendChild(saveBtn);
+    tdActions.appendChild(buildIconButton('icon-btn', 'Cancel·la l\'edició', ICONS.close, cancel));
+    tr.appendChild(tdActions);
+
+    // Enfoca el primer camp un cop la fila és al DOM.
+    setTimeout(function () { inputs[0].focus(); }, 0);
+    return tr;
   }
   renderRows();
 
@@ -5235,8 +5346,10 @@ function buildFieldControl(colIndex, label, isId) {
   } else {
     if (initialValue) input.value = initialValue;
     if (SERVICE_NAME_HEADERS.indexOf(label) !== -1) {
+      // Tots els camps de nom reben el data-lang-header (els troba la
+      // traducció per omplir-los), però només el català la dispara.
       input.dataset.langHeader = label;
-      input.addEventListener('input', debounce(handleServiceNameInput, 400));
+      if (label === 'Nom Servei') input.addEventListener('input', debounce(handleServiceNameInput, 400));
     }
   }
   return input;
@@ -5248,8 +5361,8 @@ function buildFieldControl(colIndex, label, isId) {
 // hi són no en mostren cap — el nom de la columna ja n'hi ha prou.
 const FIELD_HELP_TEXT = {
   'Nom Servei': 'Nom en català. Si l\'escrius aquí, es tradueix sol a NomCAST i NomENG.',
-  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
-  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei"; si l\'edites a mà, no es torna a traduir res).',
+  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei"; si l\'edites a mà, no es torna a traduir res).',
   'Masia': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
   'Masies': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
   'Any': 'Temporada a la qual s\'aplica el preu.',

@@ -37,8 +37,10 @@ function buildFieldControl(colIndex, label, isId) {
   } else {
     if (initialValue) input.value = initialValue;
     if (SERVICE_NAME_HEADERS.indexOf(label) !== -1) {
+      // Tots els camps de nom reben el data-lang-header (els troba la
+      // traducció per omplir-los), però només el català la dispara.
       input.dataset.langHeader = label;
-      input.addEventListener('input', debounce(handleServiceNameInput, 400));
+      if (label === 'Nom Servei') input.addEventListener('input', debounce(handleServiceNameInput, 400));
     }
   }
   return input;
@@ -50,8 +52,8 @@ function buildFieldControl(colIndex, label, isId) {
 // hi són no en mostren cap — el nom de la columna ja n'hi ha prou.
 const FIELD_HELP_TEXT = {
   'Nom Servei': 'Nom en català. Si l\'escrius aquí, es tradueix sol a NomCAST i NomENG.',
-  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
-  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei", però es pot editar a mà).',
+  'NomCAST': 'Traducció al castellà (es genera sola en escriure "Nom Servei"; si l\'edites a mà, no es torna a traduir res).',
+  'NomENG': 'Traducció a l\'anglès (es genera sola en escriure "Nom Servei"; si l\'edites a mà, no es torna a traduir res).',
   'Masia': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
   'Masies': 'A quina finca s\'aplica. Es pot marcar més d\'una.',
   'Any': 'Temporada a la qual s\'aplica el preu.',

@@ -8,6 +8,9 @@ const DESPLEGABLE_HEADER = 'Desplegable';
 // (amb debounce, com el mateix mecanisme del pas "Informació general").
 function wireLangAutoTranslate(fields) {
   fields.forEach(function (field) {
+    // Només el camp en català tradueix cap als altres; editar el
+    // castellà o l'anglès a mà mai no dispara cap traducció.
+    if (field.lang !== 'ca') return;
     const triggerTranslate = debounce(function () {
       const text = field.input.value.trim();
       if (!text) return;
@@ -86,8 +89,12 @@ function buildDesplegableListEditor(items, onChange) {
   const tbody = document.createElement('tbody');
   table.appendChild(tbody);
 
+  // Índex de l'opció que s'està editant en línia (-1 si cap).
+  let editingIndex = -1;
+
   function renderRows() {
     tbody.innerHTML = '';
+    if (editingIndex >= items.length) editingIndex = -1;
     if (!items.length) {
       const emptyRow = document.createElement('tr');
       const emptyCell = document.createElement('td');
@@ -99,28 +106,114 @@ function buildDesplegableListEditor(items, onChange) {
       return;
     }
     items.forEach(function (item, index) {
-      const tr = document.createElement('tr');
-      [item.CAT, item.CAST, item.ENG, item.PREU + ' €'].forEach(function (text) {
-        const td = document.createElement('td');
-        td.textContent = text;
-        tr.appendChild(td);
-      });
-      const tdActions = document.createElement('td');
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn icon-btn-danger';
-      removeBtn.dataset.tooltip = 'Esborra aquesta opció';
-      removeBtn.setAttribute('aria-label', 'Esborra aquesta opció');
-      removeBtn.innerHTML = ICONS.trash;
-      removeBtn.addEventListener('click', function () {
-        items.splice(index, 1);
-        renderRows();
-        onChange();
-      });
-      tdActions.appendChild(removeBtn);
-      tr.appendChild(tdActions);
-      tbody.appendChild(tr);
+      tbody.appendChild(index === editingIndex ? buildEditRow(item) : buildReadRow(item, index));
     });
+  }
+
+  function buildIconButton(className, label, icon, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = className;
+    btn.dataset.tooltip = label;
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = icon;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function buildReadRow(item, index) {
+    const tr = document.createElement('tr');
+    [item.CAT, item.CAST, item.ENG, item.PREU + ' €'].forEach(function (text) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+    const tdActions = document.createElement('td');
+    tdActions.className = 'desplegable-actions';
+    tdActions.appendChild(buildIconButton('icon-btn', 'Edita aquesta opció', ICONS.pencil, function () {
+      editingIndex = index;
+      renderRows();
+    }));
+    tdActions.appendChild(buildIconButton('icon-btn icon-btn-danger', 'Esborra aquesta opció', ICONS.trash, function () {
+      if (editingIndex !== -1 && index < editingIndex) editingIndex--;
+      else if (index === editingIndex) editingIndex = -1;
+      items.splice(index, 1);
+      renderRows();
+      onChange();
+    }));
+    tr.appendChild(tdActions);
+    return tr;
+  }
+
+  // Fila en mode edició: 4 inputs sense traducció automàtica (editar el
+  // nom d'una opció ja existent no ha de sobreescriure els altres idiomes).
+  function buildEditRow(item) {
+    const tr = document.createElement('tr');
+    tr.className = 'desplegable-row-editing';
+    const fields = [
+      { key: 'CAT', label: 'Nom en català', type: 'text', value: item.CAT },
+      { key: 'CAST', label: 'Nom en castellà', type: 'text', value: item.CAST },
+      { key: 'ENG', label: 'Nom en anglès', type: 'text', value: item.ENG },
+      { key: 'PREU', label: 'Preu', type: 'number', value: item.PREU },
+    ];
+    const inputs = fields.map(function (field) {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = field.type;
+      if (field.type === 'number') input.step = '0.01';
+      input.value = field.value;
+      input.setAttribute('aria-label', field.label);
+      td.appendChild(input);
+      tr.appendChild(td);
+      return input;
+    });
+
+    function isValid() {
+      return inputs[0].value.trim() && inputs[1].value.trim() && inputs[2].value.trim() && inputs[3].value !== '';
+    }
+    function save() {
+      if (!isValid()) return;
+      item.CAT = inputs[0].value.trim();
+      item.CAST = inputs[1].value.trim();
+      item.ENG = inputs[2].value.trim();
+      item.PREU = Number(inputs[3].value);
+      editingIndex = -1;
+      renderRows();
+      onChange();
+    }
+    function cancel() {
+      editingIndex = -1;
+      renderRows();
+    }
+
+    const saveBtn = buildIconButton('icon-btn', 'Desa els canvis', ICONS.check, save);
+    function refreshSaveBtn() { saveBtn.disabled = !isValid(); }
+    refreshSaveBtn();
+
+    inputs.forEach(function (input) {
+      input.addEventListener('input', refreshSaveBtn);
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          save();
+        } else if (event.key === 'Escape') {
+          // Evita que l'Escape tanqui també el modal sencer.
+          event.preventDefault();
+          event.stopPropagation();
+          cancel();
+        }
+      });
+    });
+
+    const tdActions = document.createElement('td');
+    tdActions.className = 'desplegable-actions';
+    tdActions.appendChild(saveBtn);
+    tdActions.appendChild(buildIconButton('icon-btn', 'Cancel·la l\'edició', ICONS.close, cancel));
+    tr.appendChild(tdActions);
+
+    // Enfoca el primer camp un cop la fila és al DOM.
+    setTimeout(function () { inputs[0].focus(); }, 0);
+    return tr;
   }
   renderRows();
 

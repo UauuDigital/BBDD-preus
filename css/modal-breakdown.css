@@ -298,6 +298,22 @@
   padding: var(--space-2);
 }
 .desplegable-table td:last-child { width: 32px; text-align: center; }
+.desplegable-table td.desplegable-actions { width: 72px; white-space: nowrap; }
+
+.desplegable-row-editing input {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  width: 100%;
+  min-width: 0;
+}
+.desplegable-row-editing input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+.desplegable-row-editing .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .desplegable-empty {
   color: var(--fg-tertiary);
