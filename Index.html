@@ -3939,8 +3939,12 @@ function buildDropdownField(colIndex, initialValue, options, multi, idPrefix, pl
   return wrap;
 }
 
-document.addEventListener('click', function () {
+// Tanca els panells en clicar fora. Un clic dins d'un panell no el tanca
+// (en multiselecció cal poder marcar-ne diverses sense reobrir-lo; la
+// uniselecció ja es tanca sola en triar, vegeu buildDropdownField).
+document.addEventListener('click', function (event) {
   document.querySelectorAll('.multiselect-panel').forEach(function (panel) {
+    if (panel.contains(event.target)) return;
     if (!panel.hidden && panel._closeMultiselect) panel._closeMultiselect();
   });
 });
